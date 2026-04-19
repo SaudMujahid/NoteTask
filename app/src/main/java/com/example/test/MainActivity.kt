@@ -11,39 +11,78 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.test.ui.screens.AddTaskScreen
-import com.example.test.ui.screens.CalendarScreen
-import com.example.test.ui.screens.HomeScreen
-import com.example.test.ui.screens.NotesScreen
+import com.example.test.ui.screens.*
+
 import com.example.test.ui.theme.TestTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
             TestTheme {
                 val navController = rememberNavController()
+                var isLoggedIn = false
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = "home",
+                        startDestination = "home", // 👈 start from signup
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable("home") { 
+
+                        // 🔐 AUTH SCREENS
+                        composable("signup") {
+                            SignUpScreen(
+                                onSignUpClick = {
+                                    navController.navigate("home") {
+                                        popUpTo("signup") { inclusive = true }
+                                    }
+                                },
+                                onLoginClick = {
+                                    navController.navigate("login")
+                                }
+                            )
+                        }
+
+                        composable("login") {
+                            LoginScreen(
+                                onLoginClick = {
+                                    navController.navigate("home") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                },
+                                onSignUpClick = {
+                                    navController.navigate("signup")
+                                }
+                            )
+                        }
+
+                        // 🏠 MAIN APP SCREENS
+                        composable("home") {
                             HomeScreen(
-                                onAddClick = { navController.navigate("add_task") },
+                                onAddClick = {
+                                    if (isLoggedIn) {
+                                        navController.navigate("add_task")
+                                    } else {
+                                        navController.navigate("login")
+                                    }
+                                },
                                 onCalendarClick = { navController.navigate("calendar") },
                                 onNotesClick = { navController.navigate("notes") }
                             )
                         }
-                        composable("add_task") { 
+
+                        composable("add_task") {
                             AddTaskScreen(
                                 onClose = { navController.popBackStack() },
                                 onSave = { navController.popBackStack() }
-                            ) 
+                            )
                         }
+
                         composable("calendar") { CalendarScreen() }
+
                         composable("notes") { NotesScreen() }
                     }
                 }
