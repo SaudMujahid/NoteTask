@@ -11,7 +11,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
@@ -36,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.test.ui.theme.*
+import com.example.test.ui.viewmodels.AuthState
 import com.example.test.ui.viewmodels.AuthViewModel
 
 @Composable
@@ -46,24 +46,27 @@ fun SignUpScreen(
     onSignUpClick: () -> Unit = {},
     onLoginClick: () -> Unit = {}
 ) {
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPw by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
+    var firstName        by remember { mutableStateOf("") }
+    var lastName         by remember { mutableStateOf("") }
+    var email            by remember { mutableStateOf("") }
+    var password         by remember { mutableStateOf("") }
+    var confirmPw        by remember { mutableStateOf("") }
+    var passwordVisible  by remember { mutableStateOf(false) }
     var confirmPwVisible by remember { mutableStateOf(false) }
 
-    // ── Dark mode palette ──
-    val bgColor = if (isDarkTheme) Color(0xFF0F0F1A) else LoginBgGray
-    val cardColor = if (isDarkTheme) Color(0xFF1A1A2E) else CardCream
-    val inputBg = if (isDarkTheme) Color(0xFF252538) else InputDark
-    val inputBorderColor = if (isDarkTheme) Color(0xFF3A3A5C) else InputBorder
+    val authState by (authViewModel?.authState?.collectAsState() ?: remember { mutableStateOf(AuthState.Idle) })
+
+    // ── Theme palette driven by isDarkTheme from parent ────────────────────
+    val bgColor         = if (isDarkTheme) Color(0xFF0F0F1A) else LoginBgGray
+    val cardColor       = if (isDarkTheme) Color(0xFF1A1A2E) else CardCream
+    val inputBg         = if (isDarkTheme) Color(0xFF252538) else InputDark
+    val inputBorderCol  = if (isDarkTheme) Color(0xFF3A3A5C) else InputBorder
     val headerTextColor = if (isDarkTheme) Color(0xFFE8E4FF) else DarkNavy
-    val primaryAccent = if (isDarkTheme) Color(0xFF9B7DFF) else Purple
-    val buttonBackground = if (isDarkTheme) Color(0xFF252538) else SignUpCardBg
-    val hintColor = if (isDarkTheme) Color(0xFF8888AA) else TextGray
-    val cardBorder = if (isDarkTheme) Color(0xFF3A3A5C) else DarkNavy
+    val primaryAccent   = if (isDarkTheme) Color(0xFF9B7DFF) else Purple
+    val buttonBg        = if (isDarkTheme) Color(0xFF252538) else SignUpCardBg
+    val hintColor       = if (isDarkTheme) Color(0xFF8888AA) else TextGray
+    val cardBorder      = if (isDarkTheme) Color(0xFF3A3A5C) else DarkNavy
+    val iconBg          = if (isDarkTheme) Color(0xFF252538) else DarkNavy
 
     Box(
         modifier = Modifier
@@ -78,9 +81,8 @@ fun SignUpScreen(
                 .padding(horizontal = 24.dp, vertical = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // ── Header ──
             Text(
                 text = "Create your\naccount",
                 fontSize = 36.sp,
@@ -90,9 +92,8 @@ fun SignUpScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(Modifier.height(40.dp))
 
-            // ── Form Card ──
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,280 +108,184 @@ fun SignUpScreen(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Personal Info
                     Text(
-                        text = "Personal info",
+                        "Personal info",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = headerTextColor,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(Modifier.height(16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
+                    // ── First name — full width ─────────────────────────────
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        placeholder = { Text("First name", color = hintColor) },
+                        leadingIcon = { Icon(Icons.Outlined.Person, null, tint = primaryAccent) },
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = firstName,
-                            onValueChange = { firstName = it },
-                            placeholder = { Text("First name", color = hintColor) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Person,
-                                    contentDescription = null,
-                                    tint = primaryAccent
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = inputBg,
-                                unfocusedContainerColor = inputBg,
-                                focusedBorderColor = primaryAccent,
-                                unfocusedBorderColor = inputBorderColor,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedPlaceholderColor = hintColor,
-                                unfocusedPlaceholderColor = hintColor
-                            ),
-                            singleLine = true
-                        )
+                        shape = RoundedCornerShape(16.dp),
+                        colors = authFieldColors(primaryAccent, inputBg, inputBorderCol, hintColor),
+                        singleLine = true
+                    )
 
-                        OutlinedTextField(
-                            value = lastName,
-                            onValueChange = { lastName = it },
-                            placeholder = { Text("Last name", color = hintColor) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = inputBg,
-                                unfocusedContainerColor = inputBg,
-                                focusedBorderColor = primaryAccent,
-                                unfocusedBorderColor = inputBorderColor,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedPlaceholderColor = hintColor,
-                                unfocusedPlaceholderColor = hintColor
-                            ),
-                            singleLine = true
-                        )
-                    }
+                    Spacer(Modifier.height(12.dp))
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    // ── Last name — full width, stacked below ───────────────
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        placeholder = { Text("Last name", color = hintColor) },
+                        leadingIcon = { Icon(Icons.Outlined.Person, null, tint = primaryAccent) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = authFieldColors(primaryAccent, inputBg, inputBorderCol, hintColor),
+                        singleLine = true
+                    )
 
-                    // Account Details
+                    Spacer(Modifier.height(24.dp))
+
                     Text(
-                        text = "Account details",
+                        "Account details",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = headerTextColor,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(Modifier.height(16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Email
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
                         placeholder = { Text("Email address", color = hintColor) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Email,
-                                contentDescription = null,
-                                tint = primaryAccent
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Outlined.Email, null, tint = primaryAccent) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = inputBg,
-                            unfocusedContainerColor = inputBg,
-                            focusedBorderColor = primaryAccent,
-                            unfocusedBorderColor = inputBorderColor,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedPlaceholderColor = hintColor,
-                            unfocusedPlaceholderColor = hintColor
-                        ),
+                        colors = authFieldColors(primaryAccent, inputBg, inputBorderCol, hintColor),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(Modifier.height(12.dp))
 
-                    // Password
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
                         placeholder = { Text("Password", color = hintColor) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Lock,
-                                contentDescription = null,
-                                tint = primaryAccent
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = primaryAccent) },
                         trailingIcon = {
-                            IconButton(
-                                onClick = { passwordVisible = !passwordVisible },
-                                modifier = Modifier.size(40.dp)
-                            ) {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }, modifier = Modifier.size(40.dp)) {
                                 Icon(
-                                    imageVector = if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                                    tint = hintColor
+                                    if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                                    null, tint = hintColor
                                 )
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = inputBg,
-                            unfocusedContainerColor = inputBg,
-                            focusedBorderColor = primaryAccent,
-                            unfocusedBorderColor = inputBorderColor,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedPlaceholderColor = hintColor,
-                            unfocusedPlaceholderColor = hintColor
-                        ),
+                        colors = authFieldColors(primaryAccent, inputBg, inputBorderCol, hintColor),
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(Modifier.height(12.dp))
 
-                    // Confirm Password
                     OutlinedTextField(
                         value = confirmPw,
                         onValueChange = { confirmPw = it },
                         placeholder = { Text("Confirm password", color = hintColor) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Lock,
-                                contentDescription = null,
-                                tint = primaryAccent
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = primaryAccent) },
                         trailingIcon = {
-                            IconButton(
-                                onClick = { confirmPwVisible = !confirmPwVisible },
-                                modifier = Modifier.size(40.dp)
-                            ) {
+                            IconButton(onClick = { confirmPwVisible = !confirmPwVisible }, modifier = Modifier.size(40.dp)) {
                                 Icon(
-                                    imageVector = if (confirmPwVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                                    contentDescription = if (confirmPwVisible) "Hide password" else "Show password",
-                                    tint = hintColor
+                                    if (confirmPwVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                                    null, tint = hintColor
                                 )
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = inputBg,
-                            unfocusedContainerColor = inputBg,
-                            focusedBorderColor = primaryAccent,
-                            unfocusedBorderColor = inputBorderColor,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedPlaceholderColor = hintColor,
-                            unfocusedPlaceholderColor = hintColor
-                        ),
+                        colors = authFieldColors(primaryAccent, inputBg, inputBorderCol, hintColor),
                         visualTransformation = if (confirmPwVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    // Passwords mismatch warning
+                    if (confirmPw.isNotEmpty() && password != confirmPw) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Passwords do not match",
+                            color = Color(0xFFFF6B6B),
+                            fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
 
-                    // Sign Up Button (fixed height, never shrinks)
+                    Spacer(Modifier.height(16.dp))
+
+                    // Auth error from ViewModel
+                    if (authState is AuthState.Error) {
+                        Text(
+                            (authState as AuthState.Error).message,
+                            color = Color(0xFFFF6B6B),
+                            fontSize = 13.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                    }
+
+                    // Sign Up Button
                     Button(
                         onClick = {
-                            if (authViewModel != null) {
-                                authViewModel.signUp(firstName, lastName, email, password) {
-                                    onSignUpClick()
-                                }
-                            } else {
+                            if (password != confirmPw) return@Button
+                            authViewModel?.signUp(firstName, lastName, email, password) {
                                 onSignUpClick()
-                            }
+                            } ?: onSignUpClick()
                         },
+                        enabled = authState !is AuthState.Loading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(58.dp),
                         shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = buttonBackground),
+                        colors = ButtonDefaults.buttonColors(containerColor = buttonBg),
                         border = androidx.compose.foundation.BorderStroke(2.dp, cardBorder)
                     ) {
-                        Text(
-                            text = "Sign Up",
-                            color = primaryAccent,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(primaryAccent, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
+                        if (authState is AuthState.Loading) {
+                            CircularProgressIndicator(color = primaryAccent, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Sign Up", color = primaryAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.width(10.dp))
+                            Box(
+                                modifier = Modifier.size(36.dp).background(primaryAccent, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.ArrowForward, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // ── Login Link ──
             TextButton(onClick = onLoginClick) {
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(SpanStyle(color = if (isDarkTheme) Color(0xFFAAAAAA) else Color.DarkGray, fontSize = 15.sp)) {
-                            append("Already have an account? ")
-                        }
-                        withStyle(
-                            SpanStyle(
-                                color = primaryAccent,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        ) {
-                            append("Log in")
-                        }
+                Text(buildAnnotatedString {
+                    withStyle(SpanStyle(color = if (isDarkTheme) Color(0xFFAAAAAA) else Color.DarkGray, fontSize = 15.sp)) {
+                        append("Already have an account? ")
                     }
-                )
+                    withStyle(SpanStyle(color = primaryAccent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)) {
+                        append("Log in")
+                    }
+                })
             }
 
-            // Down arrow
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(if (isDarkTheme) Color(0xFF3A3A5C) else Color(0xFF6B6B7E)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Scroll down",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
         }
 
-        // ── Dark Mode Toggle (Top Right) ──
+        // Dark Mode Toggle
         IconButton(
             onClick = onToggleDarkMode,
             modifier = Modifier
@@ -388,11 +293,11 @@ fun SignUpScreen(
                 .padding(top = 16.dp, end = 16.dp)
                 .size(48.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(if (isDarkTheme) Color(0xFF252538) else DarkNavy)
+                .background(iconBg)
         ) {
             Icon(
-                imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                contentDescription = if (isDarkTheme) "Switch to light mode" else "Switch to dark mode",
+                if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                null,
                 tint = Color(0xFFFFD700),
                 modifier = Modifier.size(24.dp)
             )
@@ -400,10 +305,23 @@ fun SignUpScreen(
     }
 }
 
+// ── Shared field colors (also used by LoginScreen) ────────────────────────────
+@Composable
+fun authFieldColors(accent: Color, bg: Color, border: Color, hint: Color) =
+    OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = bg,
+        unfocusedContainerColor = bg,
+        focusedBorderColor = accent,
+        unfocusedBorderColor = border,
+        focusedTextColor = Color.White,
+        unfocusedTextColor = Color.White,
+        focusedPlaceholderColor = hint,
+        unfocusedPlaceholderColor = hint,
+        cursorColor = accent
+    )
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun SignUpScreenPreview() {
-    MaterialTheme {
-        SignUpScreen()
-    }
+    MaterialTheme { SignUpScreen() }
 }

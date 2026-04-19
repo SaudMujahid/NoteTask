@@ -38,6 +38,9 @@ interface TaskDao {
 
     @Query("SELECT * FROM subtasks WHERE taskId = :taskId")
     fun getSubtasks(taskId: Long): Flow<List<Subtask>>
+
+    @Query("UPDATE tasks SET isChecked = :isChecked WHERE id = :taskId")
+    suspend fun updateTaskChecked(taskId: Long, isChecked: Boolean)
 }
 
 @Dao
