@@ -22,19 +22,15 @@ fun MyApp(
     taskRepository: TaskRepository,
     noteRepository: NoteRepository
 ) {
-    // ── Theme state (single source of truth) ──
     var isDarkTheme by remember { mutableStateOf(false) }
 
-    val navController = rememberNavController()
-
-    // ── ViewModels via Factory ──
+    val navController  = rememberNavController()
     val authViewModel: AuthViewModel = viewModel(factory = ViewModelFactory(userRepository))
     val taskViewModel: TaskViewModel = viewModel(factory = ViewModelFactory(taskRepository))
     val noteViewModel: NoteViewModel = viewModel(factory = ViewModelFactory(noteRepository))
 
     val currentUser by authViewModel.currentUser.collectAsState()
 
-    // Auto-load user data on login
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
             taskViewModel.setUser(user.id)
@@ -46,11 +42,10 @@ fun MyApp(
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = "signup",
+                startDestination = "home",
                 modifier = Modifier.padding(innerPadding)
             ) {
 
-                // ── Auth screens ───────────────────────────────
                 composable("signup") {
                     SignUpScreen(
                         isDarkTheme = isDarkTheme,
@@ -61,9 +56,7 @@ fun MyApp(
                                 popUpTo("signup") { inclusive = true }
                             }
                         },
-                        onLoginClick = {
-                            navController.navigate("login")
-                        }
+                        onLoginClick = { navController.navigate("login") }
                     )
                 }
 
@@ -77,30 +70,36 @@ fun MyApp(
                                 popUpTo("login") { inclusive = true }
                             }
                         },
-                        onSignUpClick = {
-                            navController.navigate("signup")
-                        }
+                        onSignUpClick = { navController.navigate("signup") }
                     )
                 }
 
-                // ── Main app screens ───────────────────────────
                 composable("home") {
                     HomeScreen(
                         taskViewModel = taskViewModel,
                         userId = currentUser?.id,
+                        firstName = currentUser?.firstName ?: "",   // ← real name
+                        isDarkTheme = isDarkTheme,
+                        onToggleDarkMode = { isDarkTheme = !isDarkTheme },
+                        onLogout = {
+                            authViewModel.logout()
+                            navController.navigate("login") {
+                                popUpTo("home") { inclusive = true }
+                            }
+                        },
                         onAddClick = {
                             if (currentUser != null) navController.navigate("add_task")
                             else navController.navigate("login")
                         },
                         onCalendarClick = { navController.navigate("calendar") },
-                        onNotesClick = { navController.navigate("notes") }
+                        onNotesClick    = { navController.navigate("notes") }
                     )
                 }
 
                 composable("add_task") {
                     AddTaskScreen(
                         onClose = { navController.popBackStack() },
-                        onSave = { navController.popBackStack() }
+                        onSave  = { navController.popBackStack() }
                     )
                 }
 

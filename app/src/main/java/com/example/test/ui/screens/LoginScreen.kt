@@ -172,9 +172,14 @@ fun LoginScreen(
                     // Log In Button
                     Button(
                         onClick = {
-                            authViewModel?.login(email, password) {
+                            if (authViewModel != null) {
+                                authViewModel.login(email, password) {
+                                    onLoginClick()
+                                }
+                            } else {
+                                // For preview purposes or when ViewModel is missing
                                 onLoginClick()
-                            } ?: onLoginClick()
+                            }
                         },
                         enabled = authState !is AuthState.Loading,
                         modifier = Modifier
