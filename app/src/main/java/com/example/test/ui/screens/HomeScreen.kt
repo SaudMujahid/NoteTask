@@ -1,6 +1,9 @@
 package com.example.test.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -8,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Logout
@@ -20,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.test.data.models.Task
 import com.example.test.ui.theme.*
 import com.example.test.ui.viewmodels.TaskViewModel
@@ -31,7 +36,7 @@ import java.util.*
 fun HomeScreen(
     taskViewModel: TaskViewModel,
     userId: Long?,
-    firstName: String = "",               // ← pass in from currentUser
+    firstName: String = "",
     isDarkTheme: Boolean = false,
     onToggleDarkMode: () -> Unit = {},
     onLogout: () -> Unit = {},
@@ -41,71 +46,62 @@ fun HomeScreen(
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
 
-    // Theme-aware colors
-    val bgColor       = if (isDarkTheme) Color(0xFF0F0F1A) else BackgroundGray
-    val textPrimary   = if (isDarkTheme) Color(0xFFE8E4FF) else Color(0xFF1A1A2E)
-    val textSecondary = if (isDarkTheme) Color(0xFF9999BB) else Color.Gray
-    val cardBg        = if (isDarkTheme) Color(0xFF1A1A2E) else Color(0xFFFFFBF2)
-    val cardBorder    = if (isDarkTheme) Color(0xFF3A3A5C) else Color(0xFF1A1A2E)
-    val iconBg        = if (isDarkTheme) Color(0xFF252538) else Color(0xFF1A1A2E)
+    // Theme colors
+    val bgColor     = if (isDarkTheme) Color(0xFF0F0F1A) else BackgroundGray
+    val textPrimary = if (isDarkTheme) Color(0xFFE8E4FF) else Color(0xFF1A1A2E)
+    val cardBg      = if (isDarkTheme) Color(0xFF1A1A2E) else Color.White
+    val cardBorder  = if (isDarkTheme) Color(0xFF3A3A5C) else Color(0xFF1A1A2E)
+
+    // Hamburger menu open/closed
+    var menuOpen by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
 
+        // ── Main scrollable content ───────────────────────────────────────
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 80.dp),
-            contentPadding = PaddingValues(bottom = 20.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp, end = 16.dp,
+                top = 20.dp, bottom = 20.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // ── Top bar (header card + icons) ─────────────────────────────
             item {
-                HomeTopBar(
+                HomeHeader(
                     firstName = firstName,
                     isDarkTheme = isDarkTheme,
-                    onToggleDarkMode = onToggleDarkMode,
-                    onLogout = onLogout,
                     cardBg = cardBg,
                     cardBorder = cardBorder,
-                    iconBg = iconBg,
                     textPrimary = textPrimary,
-                    accentColor = PrimaryBlue
+                    onMenuClick = { menuOpen = true }
                 )
             }
-
             item { Spacer(Modifier.height(20.dp)) }
-
             item {
                 QuickAccessRow(
                     onCalendarClick = onCalendarClick,
-                    onNotesClick = onNotesClick,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    onNotesClick = onNotesClick
                 )
             }
-
             item { Spacer(Modifier.height(24.dp)) }
-
             item {
                 Text(
                     text = "Tasks",
                     fontWeight = FontWeight.Black,
                     fontSize = 36.sp,
-                    color = textPrimary,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    color = textPrimary
                 )
             }
-
             item { Spacer(Modifier.height(12.dp)) }
-
             item {
                 TaskListCard(
                     tasks = tasks,
                     isDarkTheme = isDarkTheme,
-                    onCheckedChange = { task -> taskViewModel.toggleTask(task) },
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    onCheckedChange = { task -> taskViewModel.toggleTask(task) }
                 )
             }
-
             item { Spacer(Modifier.height(20.dp)) }
         }
 
@@ -139,23 +135,173 @@ fun HomeScreen(
                 Icon(Icons.Default.Add, "Add Task", modifier = Modifier.size(32.dp))
             }
         }
+
+        // ── Scrim: fades in/out independently, no slide ──────────────────
+        AnimatedVisibility(
+            visible = menuOpen,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(10f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .clickable { menuOpen = false }
+            )
+        }
+
+        // ── Drawer panel: slides in/out only, no fade ─────────────────────
+        AnimatedVisibility(
+            visible = menuOpen,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it }),
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(11f)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(0.72f)
+                        .align(Alignment.CenterEnd)
+                        .background(
+                            color = if (isDarkTheme) Color(0xFF1A1A2E) else Color.White,
+                            shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
+                        )
+                        .clickable { /* consume clicks so scrim doesn't close */ }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(28.dp)
+                    ) {
+                        // Close button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            IconButton(
+                                onClick = { menuOpen = false },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFEEEEEE).copy(alpha = 0.3f))
+                            ) {
+                                Icon(Icons.Default.Close, "Close menu", tint = textPrimary)
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // User greeting in drawer
+                        Text(
+                            text = if (firstName.isBlank()) "Hello!" else "Hi, $firstName 👋",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            color = textPrimary
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Accent divider
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(PrimaryBlue)
+                        )
+
+                        Spacer(Modifier.height(36.dp))
+
+                        // Dark mode toggle row
+                        DrawerMenuItem(
+                            label = if (isDarkTheme) "Light Mode" else "Dark Mode",
+                            icon = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            iconTint = Color(0xFFFFD700),
+                            textColor = textPrimary,
+                            onClick = {
+                                onToggleDarkMode()
+                                menuOpen = false
+                            }
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider(color = textPrimary.copy(alpha = 0.1f))
+                        Spacer(Modifier.height(16.dp))
+
+                        // Logout row
+                        DrawerMenuItem(
+                            label = "Log Out",
+                            icon = Icons.Default.Logout,
+                            iconTint = Color(0xFFFF6B6B),
+                            textColor = Color(0xFFFF6B6B),
+                            onClick = {
+                                menuOpen = false
+                                onLogout()
+                            }
+                        )
+
+                        Spacer(Modifier.weight(1f))
+
+                        // App version at bottom
+                        Text(
+                            "v1.0.0",
+                            fontSize = 11.sp,
+                            color = textPrimary.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
-// ── Home Top Bar ──────────────────────────────────────────────────────────────
+// ── Drawer Menu Item ──────────────────────────────────────────────────────────
 @Composable
-fun HomeTopBar(
+fun DrawerMenuItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
+    textColor: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(iconTint.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = iconTint, modifier = Modifier.size(20.dp))
+        }
+        Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = textColor)
+    }
+}
+
+// ── Home Header (card style matching the design image) ────────────────────────
+@Composable
+fun HomeHeader(
     firstName: String,
     isDarkTheme: Boolean,
-    onToggleDarkMode: () -> Unit,
-    onLogout: () -> Unit,
     cardBg: Color,
     cardBorder: Color,
-    iconBg: Color,
     textPrimary: Color,
-    accentColor: Color
+    onMenuClick: () -> Unit
 ) {
-    // Greeting based on time of day
     val greeting = remember {
         when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
             in 5..11  -> "Good morning"
@@ -164,98 +310,111 @@ fun HomeTopBar(
             else      -> "Good night"
         }
     }
-
-    // Live date string e.g. "Mon, Apr 20"
     val dateString = remember {
         SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(Date())
     }
-
     val displayName = if (firstName.isBlank()) "there" else firstName
 
     Column {
-        // ── Header card ───────────────────────────────────────────────────
+        // ── The header "text box" card ────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .border(2.dp, cardBorder, RoundedCornerShape(20.dp))
                 .background(cardBg)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Left: greeting + name
-                Column {
+                // Left side: greeting + name + date
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "$greeting,",
-                        fontSize = 14.sp,
-                        color = textPrimary.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Normal
-                    )
-                    Text(
-                        text = displayName,
-                        fontSize = 26.sp,
+                        text = "$greeting, $displayName",
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
-                        color = textPrimary
+                        color = textPrimary,
+                        lineHeight = 26.sp
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = dateString,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Light,
                         color = textPrimary.copy(alpha = 0.45f),
-                        fontWeight = FontWeight.Normal
+                        letterSpacing = 0.3.sp
                     )
                 }
 
-                // Right: dark mode toggle + profile/logout button
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Dark mode toggle
-                    IconButton(
-                        onClick = onToggleDarkMode,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(iconBg)
-                    ) {
-                        Icon(
-                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "Toggle dark mode",
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                Spacer(Modifier.width(12.dp))
 
-                    // Profile / logout button
-                    IconButton(
-                        onClick = onLogout,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(accentColor)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Logout,
-                            contentDescription = "Logout",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+                // Right side: hamburger menu button
+                HamburgerButton(
+                    color = textPrimary,
+                    onClick = onMenuClick
+                )
             }
         }
 
-        // ── Accent line matching bottom bar color ─────────────────────────
+        // ── Accent line beneath the card matching bottom bar ──────────────
+        Spacer(Modifier.height(6.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(3.dp)
-                .background(accentColor)
+                .clip(RoundedCornerShape(50))
+                .background(PrimaryBlue)
         )
+    }
+}
+
+// ── Hamburger Button (3 animated bars) ───────────────────────────────────────
+@Composable
+fun HamburgerButton(color: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.08f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Bar 1 — full width
+            Box(
+                modifier = Modifier
+                    .width(22.dp)
+                    .height(2.5.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(color)
+            )
+            // Bar 2 — slightly shorter for style
+            Box(
+                modifier = Modifier
+                    .width(16.dp)
+                    .height(2.5.dp)
+                    .clip(RoundedCornerShape(50))
+                    .align(Alignment.Start)
+                    .offset(x = 3.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(PrimaryBlue)
+            )
+            // Bar 3 — full width
+            Box(
+                modifier = Modifier
+                    .width(22.dp)
+                    .height(2.5.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(color)
+            )
+        }
     }
 }
 
@@ -263,11 +422,10 @@ fun HomeTopBar(
 @Composable
 fun QuickAccessRow(
     onCalendarClick: () -> Unit,
-    onNotesClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onNotesClick: () -> Unit
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         QuickAccessCard(
@@ -336,16 +494,10 @@ fun TaskListCard(
         Column {
             if (tasks.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "No tasks yet. Tap + to add one!",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
+                    Text("No tasks yet. Tap + to add one!", color = Color.Gray, fontSize = 14.sp)
                 }
             } else {
                 tasks.forEachIndexed { index, task ->
