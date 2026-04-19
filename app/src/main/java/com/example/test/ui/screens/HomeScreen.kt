@@ -1,53 +1,3 @@
-//package com.example.test.ui.screens
-//
-//import androidx.compose.foundation.layout.*
-//import androidx.compose.foundation.lazy.LazyColumn
-//import androidx.compose.foundation.shape.CircleShape
-//import androidx.compose.material.icons.Icons
-//import androidx.compose.material.icons.filled.Add
-//import androidx.compose.material3.*
-//import androidx.compose.runtime.Composable
-//import androidx.compose.runtime.remember
-//import androidx.compose.ui.Modifier
-//import androidx.compose.ui.graphics.Color
-//import androidx.compose.ui.text.font.FontWeight
-//import androidx.compose.ui.unit.dp
-//import com.example.test.ui.theme.BackgroundGray
-//import com.example.test.ui.theme.PrimaryBlue
-//
-//@Composable
-//fun HomeScreen(onAddTask: () -> Unit) {
-//    Scaffold(
-//        containerColor = BackgroundGray,
-//        floatingActionButton = {
-//            FloatingActionButton(
-//                onClick = onAddTask,
-//                containerColor = PrimaryBlue,
-//                shape = CircleShape
-//            ) {
-//                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
-//            }
-//        },
-//        floatingActionButtonPosition = FabPosition.End
-//    ) { padding ->
-//        LazyColumn(
-//            modifier = Modifier
-//                .padding(padding)
-//                .padding(horizontal = 16.dp),
-//            verticalArrangement = Arrangement.spacedBy(12.dp)
-//        ) {
-//            item { Spacer(Modifier.height(16.dp)) }
-//            item {
-//                Text(
-//                    "Tasks",
-//                    style = MaterialTheme.typography.headlineLarge,
-//                    fontWeight = FontWeight.Black
-//                )
-//            }
-//            // Add more items or task list here
-//        }
-//    }
-//}
 
 package com.example.test.ui.screens
 
@@ -72,35 +22,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.test.data.models.Task
 import com.example.test.ui.theme.*
-
-// ── Data Models ──────────────────────────────────────────────────────────────
-data class Task(
-    val id: Int,
-    val title: String,
-    val category: String,
-    val subtasks: List<String> = emptyList(),
-    var isChecked: Boolean = false
-)
-
-fun sampleTasks() = listOf(
-    Task(1, "Drink 8 glasses of water", "HEALTH"),
-    Task(2, "Edit the PDF", "WORK"),
-    Task(
-        3, "Write in a gratitude journal", "MENTAL HEALTH",
-        subtasks = listOf("Get a notebook", "Follow the youtube tutorial")
-    ),
-    Task(4, "Stretch everyday for 15 mins", "HEALTH"),
-)
+import com.example.test.ui.viewmodels.TaskViewModel
 
 // ── HomeScreen ────────────────────────────────────────────────────────────────
 @Composable
 fun HomeScreen(
+    taskViewModel: TaskViewModel,
+    userId: Long?,
     onAddClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onNotesClick: () -> Unit = {}
 ) {
-    var tasks by remember { mutableStateOf(sampleTasks()) }
+    val tasks by taskViewModel.tasks.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize().background(BackgroundGray)) {
 
@@ -133,8 +68,8 @@ fun HomeScreen(
             item {
                 TaskListCard(
                     tasks = tasks,
-                    onCheckedChange = { id, checked ->
-                        tasks = tasks.map { if (it.id == id) it.copy(isChecked = checked) else it }
+                    onCheckedChange = { task ->
+                        taskViewModel.toggleTask(task)
                     }
                 )
             }
@@ -151,23 +86,31 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(BottomBarBlue)
+                    .height(65.dp)
+                    .padding(top = 10.dp) // creates a gap so it looks floating or defined
+                    .background(
+                        color = PrimaryBlue,
+                        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+                    )
             )
-            // FAB overlapping the bar
-            FloatingActionButton(
+
+            // FAB
+            LargeFloatingActionButton(
                 onClick = onAddClick,
-                containerColor = PrimaryBlue,
-                contentColor = Color.White,
                 shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(6.dp),
+                containerColor = Color.White,
+                contentColor = PrimaryBlue,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .offset(y = (-20).dp)
-                    .size(56.dp)
+                    .align(Alignment.TopCenter)
+                    .offset(y = (-15).dp)
+                    .size(64.dp),
+                elevation = FloatingActionButtonDefaults.elevation(4.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Task", tint = Color.White)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Task",
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
     }
@@ -176,33 +119,20 @@ fun HomeScreen(
 // ── Welcome Header ────────────────────────────────────────────────────────────
 @Composable
 fun WelcomeHeader() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardWhite),
-        border = BorderStroke(2.dp, BorderBlue),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Welcome back, John",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Color(0xFF1A1A2E)
-            )
-            Text(
-                text = "Apr 19",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Light,
-                color = Color(0xFFB0B0C0)
-            )
-        }
+    Column {
+        Text(
+            text = "Morning, \nLiar Punk",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Black,
+            lineHeight = 38.sp,
+            color = Color(0xFF1A1A2E)
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "You have 3 tasks for today",
+            fontSize = 16.sp,
+            color = Color.Gray
+        )
     }
 }
 
@@ -216,79 +146,53 @@ fun QuickAccessRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Calendar Card
-        Card(
-            onClick = onCalendarClick,
-            modifier = Modifier
-                .weight(1f)
-                .height(120.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = CardWhite),
-            border = BorderStroke(2.dp, BorderBlue),
-            elevation = CardDefaults.cardElevation(2.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CalendarMonth,
-                    contentDescription = "Calendar",
-                    tint = Color(0xFF1A1A2E),
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Calendar",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Color(0xFF1A1A2E)
-                )
-            }
-        }
+        QuickAccessCard(
+            title = "Notes",
+            subtitle = "24 notes",
+            icon = Icons.Default.Add, // Using Add as placeholder for Note icon
+            backgroundColor = Color(0xFFFFD54F),
+            modifier = Modifier.weight(1f),
+            onClick = onNotesClick
+        )
+        QuickAccessCard(
+            title = "Calendar",
+            subtitle = "Mar 2025",
+            icon = Icons.Default.CalendarMonth,
+            backgroundColor = Color(0xFF81C784),
+            modifier = Modifier.weight(1f),
+            onClick = onCalendarClick
+        )
+    }
+}
 
-        // Notes Card
-        Card(
-            onClick = onNotesClick,
-            modifier = Modifier
-                .weight(1f)
-                .height(120.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = CardWhite),
-            border = BorderStroke(2.dp, BorderGreen),
-            elevation = CardDefaults.cardElevation(2.dp)
+@Composable
+fun QuickAccessCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(110.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = backgroundColor
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                // Notes icon — green rounded rectangle with a dot
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(BorderGreen),
-                    contentAlignment = Alignment.TopCenter
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 5.dp)
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Notes",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Color(0xFF1A1A2E)
-                )
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
+            )
+            Column {
+                Text(title, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+                Text(subtitle, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
             }
         }
     }
@@ -298,7 +202,7 @@ fun QuickAccessRow(
 @Composable
 fun TaskListCard(
     tasks: List<Task>,
-    onCheckedChange: (Int, Boolean) -> Unit
+    onCheckedChange: (Task) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -310,7 +214,7 @@ fun TaskListCard(
             tasks.forEachIndexed { index, task ->
                 TaskItem(
                     task = task,
-                    onCheckedChange = { checked -> onCheckedChange(task.id, checked) }
+                    onCheckedChange = { onCheckedChange(task) }
                 )
                 if (index < tasks.lastIndex) {
                     HorizontalDivider(
@@ -358,28 +262,6 @@ fun TaskItem(
                 CategoryChip(category = task.category)
             }
         }
-
-        // Subtasks
-        task.subtasks.forEach { subtask ->
-            Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.padding(start = 36.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = false,
-                    onCheckedChange = {},
-                    colors = CheckboxDefaults.colors(uncheckedColor = Color(0xFFCCCCCC)),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = subtask,
-                    fontSize = 14.sp,
-                    color = Color(0xFF666666)
-                )
-            }
-        }
     }
 }
 
@@ -414,6 +296,7 @@ fun CategoryChip(category: String) {
 @Composable
 fun HomeScreenPreview() {
     MaterialTheme {
-        HomeScreen()
+        // Preview can't easily show the ViewModel logic
+        Text("Home Screen Preview")
     }
 }
