@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,13 +30,82 @@ fun AddTaskScreen(
 
     var title by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Work") }
-    val date = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
+
+    // Date state
+    val todayMillis = remember { Calendar.getInstance().timeInMillis }
+    var selectedDateMillis by remember { mutableStateOf(todayMillis) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val displayFormatter = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()) }
+
+    val date = remember(selectedDateMillis) { dateFormatter.format(Date(selectedDateMillis)) }
+    val dateDisplay = remember(selectedDateMillis) { displayFormatter.format(Date(selectedDateMillis)) }
 
     val categories = listOf("Work", "Health", "Mental Health", "Other")
 
+    // ── Date Picker Dialog ───────────────────────────────────────────────
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedDateMillis,
+            selectableDates = object : SelectableDates {
+                // Optional: allow any date. Remove this block if you want to restrict range.
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean = true
+                override fun isSelectableYear(year: Int): Boolean = true
+            }
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            selectedDateMillis = it
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK", color = colorScheme.primary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel", color = colorScheme.onSurfaceVariant)
+                }
+            },
+            colors = DatePickerDefaults.colors(
+                containerColor = colorScheme.surface,
+                titleContentColor = colorScheme.onSurface,
+                headlineContentColor = colorScheme.onSurface,
+                weekdayContentColor = colorScheme.onSurfaceVariant,
+                subheadContentColor = colorScheme.onSurfaceVariant,
+                yearContentColor = colorScheme.onSurfaceVariant,
+                currentYearContentColor = colorScheme.primary,
+                selectedYearContentColor = colorScheme.onPrimary,
+                selectedYearContainerColor = colorScheme.primary,
+                dayContentColor = colorScheme.onSurface,
+                selectedDayContentColor = colorScheme.onPrimary,
+                selectedDayContainerColor = colorScheme.primary,
+                todayContentColor = colorScheme.primary,
+                todayDateBorderColor = colorScheme.primary
+            )
+        ) {
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = true,
+                colors = DatePickerDefaults.colors(
+                    selectedDayContentColor = colorScheme.onPrimary,
+                    selectedDayContainerColor = colorScheme.primary,
+                    todayContentColor = colorScheme.primary,
+                    todayDateBorderColor = colorScheme.primary
+                )
+            )
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
 
-        // Close button
         IconButton(
             onClick = onClose,
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
@@ -61,7 +131,6 @@ fun AddTaskScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Title input
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -77,7 +146,6 @@ fun AddTaskScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Category dropdown
             var expanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expanded,
@@ -113,21 +181,35 @@ fun AddTaskScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Date display (read-only for now)
+            // ── Clickable date field ─────────────────────────────────────
             Surface(
+                onClick = { showDatePicker = true },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(8.dp),
                 color = colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline)
             ) {
-                Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text("Today · $date", color = colorScheme.onSurfaceVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = dateDisplay,
+                        color = colorScheme.onSurface
+                    )
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Select date",
+                        tint = colorScheme.primary
+                    )
                 }
             }
 
             Spacer(Modifier.weight(1f))
 
-            // Save button
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
