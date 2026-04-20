@@ -92,7 +92,15 @@ fun MyApp(
                             else navController.navigate("login")
                         },
                         onCalendarClick = { navController.navigate("calendar") },
-                        onNotesClick    = { navController.navigate("notes") }
+                        onNotesClick    = { navController.navigate("notes") },
+                        onTasksClick = { navController.navigate("today_tasks") }
+                    )
+                }
+
+                composable("today_tasks") {
+                    TodayTasksScreen(
+                        taskViewModel = taskViewModel,
+                        onClose = { navController.popBackStack() }
                     )
                 }
 

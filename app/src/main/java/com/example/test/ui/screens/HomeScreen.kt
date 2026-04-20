@@ -1,7 +1,6 @@
 package com.example.test.ui.screens
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,11 +9,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
@@ -23,36 +22,37 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.test.data.models.Task
+import com.example.test.ui.components.TaskItem
 import com.example.test.ui.theme.*
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
-import com.example.test.ui.components.TaskItem
+
 @Composable
 fun HomeScreen(
     taskViewModel: TaskViewModel,
     userId: Long?,
     firstName: String = "",
-    isDarkTheme: Boolean = false, // only used for toggle icon/label now
+    isDarkTheme: Boolean = false,
     onToggleDarkMode: () -> Unit = {},
     onLogout: () -> Unit = {},
     onAddClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
-    onNotesClick: () -> Unit = {}
+    onNotesClick: () -> Unit = {},
+    onTasksClick: () -> Unit = {}
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
-    LaunchedEffect(userId) {
-        userId?.let { taskViewModel.setUser(it) }
-    }
+
+    // Only unchecked tasks on the home preview
+    val pendingTasks = remember(tasks) { tasks.filter { !it.isChecked } }
+
     var menuOpen by remember { mutableStateOf(false) }
-    var tasksExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
 
@@ -72,27 +72,20 @@ fun HomeScreen(
             item { Spacer(Modifier.height(20.dp)) }
 
             item {
-                AnimatedVisibility(
-                    visible = !tasksExpanded,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    Column {
-                        QuickAccessRow(
-                            onCalendarClick = onCalendarClick,
-                            onNotesClick = onNotesClick
-                        )
-                        Spacer(Modifier.height(24.dp))
-                    }
-                }
+                QuickAccessRow(
+                    onCalendarClick = onCalendarClick,
+                    onNotesClick = onNotesClick
+                )
+                Spacer(Modifier.height(24.dp))
             }
 
+            // Tasks header — opens fullscreen
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { tasksExpanded = !tasksExpanded }
+                        .clickable { onTasksClick() }
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -103,10 +96,6 @@ fun HomeScreen(
                         fontSize = 36.sp,
                         color = colorScheme.onBackground
                     )
-                    val rotation by animateFloatAsState(
-                        targetValue = if (tasksExpanded) 180f else 0f,
-                        label = "chevron"
-                    )
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -115,34 +104,10 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (tasksExpanded) "Collapse" else "Expand",
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "View all tasks",
                             tint = colorScheme.primary,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .graphicsLayer { rotationZ = rotation }
-                        )
-                    }
-                }
-            }
-
-            item {
-                AnimatedVisibility(
-                    visible = tasksExpanded,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    val todayLabel = remember {
-                        SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date())
-                    }
-                    Column {
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Today · $todayLabel",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = colorScheme.primary,
-                            letterSpacing = 0.3.sp
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
@@ -152,7 +117,7 @@ fun HomeScreen(
 
             item {
                 TaskListCard(
-                    tasks = tasks,
+                    tasks = pendingTasks,
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) }
                 )
             }
@@ -507,7 +472,7 @@ fun TaskListCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "No tasks yet. Tap + to add one!",
+                        "No pending tasks. Tap + to add one!",
                         color = colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
@@ -521,10 +486,7 @@ fun TaskListCard(
                         onCheckedChange = { onCheckedChange(task) }
                     )
                     if (index < tasks.lastIndex) {
-                        HorizontalDivider(
-                            color = colorScheme.outline.copy(alpha = 0.3f),
-                            thickness = 1.dp
-                        )
+                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f), thickness = 1.dp)
                     }
                 }
             }
@@ -532,6 +494,3 @@ fun TaskListCard(
         }
     }
 }
-
-
-
