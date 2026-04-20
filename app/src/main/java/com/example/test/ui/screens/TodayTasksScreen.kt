@@ -1,5 +1,6 @@
 package com.example.test.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +15,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.test.data.models.Task
+import com.example.test.ui.components.CategoryChip
 import com.example.test.ui.components.TaskItem
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
@@ -30,9 +33,13 @@ fun TodayTasksScreen(
 
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
     val todayLabel = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date()) }
+    val displayFormatter = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
 
-    // If your Task model has a 'date' field, filter by today:
-    val todaysTasks = remember(tasks) { tasks.filter { it.date == today } }
+    // yyyy-MM-dd compares correctly as strings (lexicographical)
+    val todayTasks = remember(tasks) { tasks.filter { it.date == today } }
+    val overdueTasks = remember(tasks) {
+        tasks.filter { it.date < today && it.date.isNotBlank() }.sortedBy { it.date }
+    }
 
     Scaffold(
         topBar = {
@@ -71,29 +78,33 @@ fun TodayTasksScreen(
         },
         containerColor = colorScheme.background
     ) { padding ->
-        if (todaysTasks.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    "No tasks for today.",
-                    color = colorScheme.onSurfaceVariant,
-                    fontSize = 16.sp
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
-            ) {
-                items(todaysTasks.size) { index ->
-                    val task = todaysTasks[index]
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+
+            // ── TODAY ─────────────────────────────────────────────────────
+            if (todayTasks.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No tasks for today.",
+                            color = colorScheme.onSurfaceVariant,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            } else {
+                items(todayTasks.size) { index ->
+                    val task = todayTasks[index]
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -109,11 +120,117 @@ fun TodayTasksScreen(
                             onCheckedChange = { taskViewModel.toggleTask(task) }
                         )
                     }
-                    if (index < todaysTasks.lastIndex) {
-                        Spacer(Modifier.height(4.dp))
+                }
+            }
+
+            // ── OVERDUE ───────────────────────────────────────────────────
+            if (overdueTasks.isNotEmpty()) {
+                item { Spacer(Modifier.height(24.dp)) }
+
+                item {
+                    Text(
+                        text = "Overdue",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = colorScheme.error,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = colorScheme.error.copy(alpha = 0.08f)
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            colorScheme.error.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            overdueTasks.forEachIndexed { index, task ->
+                                val parsedDate = remember(task.date) {
+                                    try {
+                                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                            .parse(task.date)
+                                    } catch (_: Exception) { null }
+                                }
+                                val dateText = parsedDate?.let { displayFormatter.format(it) } ?: task.date
+
+                                OverdueTaskRow(
+                                    task = task,
+                                    dateText = dateText,
+                                    onToggle = { taskViewModel.toggleTask(task) }
+                                )
+                                if (index < overdueTasks.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 12.dp),
+                                        color = colorScheme.error.copy(alpha = 0.15f)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun OverdueTaskRow(
+    task: Task,
+    dateText: String,
+    onToggle: () -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Checkbox(
+                checked = task.isChecked,
+                onCheckedChange = { onToggle() },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = colorScheme.error,
+                    uncheckedColor = colorScheme.error.copy(alpha = 0.5f)
+                )
+            )
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text(
+                    text = task.title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = if (task.isChecked) colorScheme.onSurface.copy(alpha = 0.4f)
+                    else colorScheme.onSurface
+                )
+                Spacer(Modifier.height(4.dp))
+                CategoryChip(category = task.category)
+            }
+        }
+
+        // Date badge
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(colorScheme.error.copy(alpha = 0.12f))
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+        ) {
+            Text(
+                text = dateText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colorScheme.error
+            )
         }
     }
 }
