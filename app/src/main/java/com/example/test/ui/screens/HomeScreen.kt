@@ -1,6 +1,7 @@
 package com.example.test.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
@@ -21,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +57,8 @@ fun HomeScreen(
 
     // Hamburger menu open/closed
     var menuOpen by remember { mutableStateOf(false) }
+    // Tasks section expand/collapse
+    var tasksExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
 
@@ -79,22 +84,91 @@ fun HomeScreen(
                 )
             }
             item { Spacer(Modifier.height(20.dp)) }
+
+            // Quick access cards — slide up and hide when tasks expanded
             item {
-                QuickAccessRow(
-                    onCalendarClick = onCalendarClick,
-                    onNotesClick = onNotesClick
-                )
+                AnimatedVisibility(
+                    visible = !tasksExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column {
+                        QuickAccessRow(
+                            onCalendarClick = onCalendarClick,
+                            onNotesClick = onNotesClick
+                        )
+                        Spacer(Modifier.height(24.dp))
+                    }
+                }
             }
-            item { Spacer(Modifier.height(24.dp)) }
+
+            // Tasks header — tappable to expand/collapse
             item {
-                Text(
-                    text = "Tasks",
-                    fontWeight = FontWeight.Black,
-                    fontSize = 36.sp,
-                    color = textPrimary
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { tasksExpanded = !tasksExpanded }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Tasks",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 36.sp,
+                        color = textPrimary
+                    )
+                    // Animated chevron rotates when expanded
+                    val rotation by animateFloatAsState(
+                        targetValue = if (tasksExpanded) 180f else 0f,
+                        label = "chevron"
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryBlue.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (tasksExpanded) "Collapse" else "Expand",
+                            tint = PrimaryBlue,
+                            modifier = Modifier
+                                .size(22.dp)
+                                .graphicsLayer { rotationZ = rotation }
+                        )
+                    }
+                }
             }
+
+            // Today's date label — only visible when expanded
+            item {
+                AnimatedVisibility(
+                    visible = tasksExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    val todayLabel = remember {
+                        java.text.SimpleDateFormat("EEEE, MMM d", java.util.Locale.getDefault())
+                            .format(java.util.Date())
+                    }
+                    Column {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Today · $todayLabel",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = PrimaryBlue,
+                            letterSpacing = 0.3.sp
+                        )
+                    }
+                }
+            }
+
             item { Spacer(Modifier.height(12.dp)) }
+
             item {
                 TaskListCard(
                     tasks = tasks,
