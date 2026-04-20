@@ -49,24 +49,15 @@ fun LoginScreen(
     var password        by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    val authState by (authViewModel?.authState?.collectAsState() ?: remember { mutableStateOf(AuthState.Idle) })
+    val authState by (authViewModel?.authState?.collectAsState()
+        ?: remember { mutableStateOf(AuthState.Idle) })
 
-    // ── Theme palette driven by isDarkTheme from parent ────────────────────
-    val bgColor         = if (isDarkTheme) Color(0xFF0F0F1A) else LoginBgGray
-    val cardColor       = if (isDarkTheme) Color(0xFF1A1A2E) else CardCream
-    val inputBg         = if (isDarkTheme) Color(0xFF252538) else InputDark
-    val inputBorderCol  = if (isDarkTheme) Color(0xFF3A3A5C) else InputBorder
-    val headerTextColor = if (isDarkTheme) Color(0xFFE8E4FF) else DarkNavy
-    val primaryAccent   = if (isDarkTheme) Color(0xFF9B7DFF) else Purple
-    val buttonBg        = if (isDarkTheme) Color(0xFF252538) else SignUpCardBg
-    val hintColor       = if (isDarkTheme) Color(0xFF8888AA) else TextGray
-    val cardBorder      = if (isDarkTheme) Color(0xFF3A3A5C) else DarkNavy
-    val iconBg          = if (isDarkTheme) Color(0xFF252538) else DarkNavy
+    val colors = rememberAuthColors(isDarkTheme)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(bgColor)
+            .background(colors.background)
             .imePadding()
     ) {
         Column(
@@ -82,7 +73,7 @@ fun LoginScreen(
                 text = "Welcome\nback",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = headerTextColor,
+                color = colors.headerText,
                 lineHeight = 42.sp,
                 textAlign = TextAlign.Center
             )
@@ -92,9 +83,9 @@ fun LoginScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(2.dp, cardBorder, RoundedCornerShape(24.dp)),
+                    .border(2.dp, colors.cardBorder, RoundedCornerShape(24.dp)),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = cardColor),
+                colors = CardDefaults.cardColors(containerColor = colors.card),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Column(
@@ -107,57 +98,62 @@ fun LoginScreen(
                         "Account details",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = headerTextColor,
+                        color = colors.headerText,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(Modifier.height(20.dp))
 
-                    // Email
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        placeholder = { Text("Email address", color = hintColor) },
-                        leadingIcon = { Icon(Icons.Outlined.Email, null, tint = primaryAccent) },
+                        placeholder = { Text("Email address", color = colors.hint) },
+                        leadingIcon = { Icon(Icons.Outlined.Email, null, tint = colors.primaryAccent) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = authFieldColors(primaryAccent, inputBg, inputBorderCol, hintColor),
+                        colors = authFieldColors(colors),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true
                     )
 
                     Spacer(Modifier.height(14.dp))
 
-                    // Password
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        placeholder = { Text("Password", color = hintColor) },
-                        leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = primaryAccent) },
+                        placeholder = { Text("Password", color = colors.hint) },
+                        leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = colors.primaryAccent) },
                         trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }, modifier = Modifier.size(40.dp)) {
+                            IconButton(
+                                onClick = { passwordVisible = !passwordVisible },
+                                modifier = Modifier.size(40.dp)
+                            ) {
                                 Icon(
                                     if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                                    null, tint = hintColor
+                                    null,
+                                    tint = colors.hint
                                 )
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = authFieldColors(primaryAccent, inputBg, inputBorderCol, hintColor),
+                        colors = authFieldColors(colors),
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true
                     )
 
-                    // Forgot password
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                         TextButton(onClick = {}, contentPadding = PaddingValues(0.dp)) {
-                            Text("Forgot password?", color = primaryAccent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                "Forgot password?",
+                                color = colors.primaryAccent,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
 
-                    // Auth error
                     if (authState is AuthState.Error) {
                         Text(
                             (authState as AuthState.Error).message,
@@ -169,15 +165,11 @@ fun LoginScreen(
                         )
                     }
 
-                    // Log In Button
                     Button(
                         onClick = {
                             if (authViewModel != null) {
-                                authViewModel.login(email, password) {
-                                    onLoginClick()
-                                }
+                                authViewModel.login(email, password) { onLoginClick() }
                             } else {
-                                // For preview purposes or when ViewModel is missing
                                 onLoginClick()
                             }
                         },
@@ -186,19 +178,35 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .height(58.dp),
                         shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = buttonBg),
-                        border = androidx.compose.foundation.BorderStroke(2.dp, cardBorder)
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.buttonBackground),
+                        border = androidx.compose.foundation.BorderStroke(2.dp, colors.cardBorder)
                     ) {
                         if (authState is AuthState.Loading) {
-                            CircularProgressIndicator(color = primaryAccent, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(
+                                color = colors.primaryAccent,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
                         } else {
-                            Text("Log In", color = primaryAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Log In",
+                                color = colors.primaryAccent,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                             Spacer(Modifier.width(10.dp))
                             Box(
-                                modifier = Modifier.size(36.dp).background(primaryAccent, CircleShape),
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(colors.primaryAccent, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.ArrowForward, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    Icons.Default.ArrowForward,
+                                    null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
@@ -209,10 +217,16 @@ fun LoginScreen(
 
             TextButton(onClick = onSignUpClick) {
                 Text(buildAnnotatedString {
-                    withStyle(SpanStyle(color = if (isDarkTheme) Color(0xFFAAAAAA) else Color.DarkGray, fontSize = 15.sp)) {
+                    withStyle(SpanStyle(color = colors.hint, fontSize = 15.sp)) {
                         append("Don't have an account? ")
                     }
-                    withStyle(SpanStyle(color = primaryAccent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)) {
+                    withStyle(
+                        SpanStyle(
+                            color = colors.primaryAccent,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    ) {
                         append("Sign up")
                     }
                 })
@@ -221,7 +235,6 @@ fun LoginScreen(
             Spacer(Modifier.height(40.dp))
         }
 
-        // Dark Mode Toggle
         IconButton(
             onClick = onToggleDarkMode,
             modifier = Modifier
@@ -229,7 +242,7 @@ fun LoginScreen(
                 .padding(top = 16.dp, end = 16.dp)
                 .size(48.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(iconBg)
+                .background(colors.iconBackground)
         ) {
             Icon(
                 if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
