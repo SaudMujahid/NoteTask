@@ -97,10 +97,13 @@ fun MyApp(
                 }
 
                 composable("add_task") {
-                    AddTaskScreen(
-                        onClose = { navController.popBackStack() },
-                        onSave  = { navController.popBackStack() }
-                    )
+                    currentUser?.let { user ->
+                        AddTaskScreen(
+                            userId = user.id,
+                            taskViewModel = taskViewModel,
+                            onClose = { navController.popBackStack() }
+                        )
+                    }
                 }
 
                 composable("calendar") { CalendarScreen() }

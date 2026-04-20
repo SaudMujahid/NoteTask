@@ -14,14 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.test.ui.theme.SubtaskIndent
-
-//@Composable
-//fun TaskItem() {
-//    Text(text = "Task Item Component")
-//}
 
 @Composable
 fun TaskItem(
@@ -31,27 +25,49 @@ fun TaskItem(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = checked, onCheckedChange = onCheckedChange,
-                colors = CheckboxDefaults.colors(uncheckedColor = Color.LightGray))
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = CheckboxDefaults.colors(
+                    uncheckedColor = colorScheme.outline,
+                    checkedColor = colorScheme.primary
+                )
+            )
             Spacer(Modifier.width(8.dp))
             Column {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (checked) colorScheme.onSurface.copy(alpha = 0.4f)
+                    else colorScheme.onSurface
+                )
                 Spacer(Modifier.height(4.dp))
                 CategoryChip(category)
             }
         }
+
         // Subtasks (indented)
         subtasks.forEach { subtask ->
             Row(
                 modifier = Modifier.padding(start = SubtaskIndent, top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Checkbox(checked = false, onCheckedChange = {},
-                    modifier = Modifier.size(20.dp))
+                Checkbox(
+                    checked = false,
+                    onCheckedChange = {},
+                    modifier = Modifier.size(20.dp),
+                    colors = CheckboxDefaults.colors(uncheckedColor = colorScheme.outline)
+                )
                 Spacer(Modifier.width(8.dp))
-                Text(subtask, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                Text(
+                    text = subtask,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant
+                )
             }
         }
     }

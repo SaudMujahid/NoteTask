@@ -33,7 +33,7 @@ import com.example.test.ui.theme.*
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
-
+import com.example.test.ui.components.TaskItem
 @Composable
 fun HomeScreen(
     taskViewModel: TaskViewModel,
@@ -48,7 +48,9 @@ fun HomeScreen(
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
-
+    LaunchedEffect(userId) {
+        userId?.let { taskViewModel.setUser(it) }
+    }
     var menuOpen by remember { mutableStateOf(false) }
     var tasksExpanded by remember { mutableStateOf(false) }
 
@@ -513,11 +515,16 @@ fun TaskListCard(
             } else {
                 tasks.forEachIndexed { index, task ->
                     TaskItem(
-                        task = task,
+                        title = task.title,
+                        category = task.category,
+                        checked = task.isChecked,
                         onCheckedChange = { onCheckedChange(task) }
                     )
                     if (index < tasks.lastIndex) {
-                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f), thickness = 1.dp)
+                        HorizontalDivider(
+                            color = colorScheme.outline.copy(alpha = 0.3f),
+                            thickness = 1.dp
+                        )
                     }
                 }
             }
@@ -526,64 +533,5 @@ fun TaskListCard(
     }
 }
 
-@Composable
-fun TaskItem(
-    task: Task,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val textColor = colorScheme.onSurface
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp)
-    ) {
-        Row(verticalAlignment = Alignment.Top) {
-            Checkbox(
-                checked = task.isChecked,
-                onCheckedChange = onCheckedChange,
-                colors = CheckboxDefaults.colors(
-                    uncheckedColor = colorScheme.outline,
-                    checkedColor = colorScheme.primary
-                ),
-                modifier = Modifier.size(24.dp).padding(top = 2.dp)
-            )
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(
-                    text = task.title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = if (task.isChecked) Color.Gray else textColor
-                )
-                Spacer(Modifier.height(6.dp))
-                CategoryChip(category = task.category)
-            }
-        }
-    }
-}
 
-@Composable
-fun CategoryChip(category: String) {
-    val (bg, textColor) = when (category.uppercase()) {
-        "HEALTH"        -> ChipHealthBg to ChipHealthText
-        "WORK"          -> ChipWorkBg to ChipWorkText
-        "MENTAL HEALTH" -> ChipMentalBg to ChipMentalText
-        else            -> Color(0xFFF0F0F0) to Color.Gray
-    }
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(bg)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-    ) {
-        Text(
-            text = category,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = textColor,
-            letterSpacing = 0.5.sp
-        )
-    }
-}
