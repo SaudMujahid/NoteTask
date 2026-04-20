@@ -34,13 +34,12 @@ import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ── HomeScreen ────────────────────────────────────────────────────────────────
 @Composable
 fun HomeScreen(
     taskViewModel: TaskViewModel,
     userId: Long?,
     firstName: String = "",
-    isDarkTheme: Boolean = false,
+    isDarkTheme: Boolean = false, // only used for toggle icon/label now
     onToggleDarkMode: () -> Unit = {},
     onLogout: () -> Unit = {},
     onAddClick: () -> Unit = {},
@@ -48,44 +47,28 @@ fun HomeScreen(
     onNotesClick: () -> Unit = {}
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
 
-    // Theme colors
-    val bgColor     = if (isDarkTheme) Color(0xFF0F0F1A) else BackgroundGray
-    val textPrimary = if (isDarkTheme) Color(0xFFE8E4FF) else Color(0xFF1A1A2E)
-    val cardBg      = if (isDarkTheme) Color(0xFF1A1A2E) else Color.White
-    val cardBorder  = if (isDarkTheme) Color(0xFF3A3A5C) else Color(0xFF1A1A2E)
-
-    // Hamburger menu open/closed
     var menuOpen by remember { mutableStateOf(false) }
-    // Tasks section expand/collapse
     var tasksExpanded by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
+    Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
 
-        // ── Main scrollable content ───────────────────────────────────────
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 80.dp),
-            contentPadding = PaddingValues(
-                start = 16.dp, end = 16.dp,
-                top = 20.dp, bottom = 20.dp
-            ),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
                 HomeHeader(
                     firstName = firstName,
-                    isDarkTheme = isDarkTheme,
-                    cardBg = cardBg,
-                    cardBorder = cardBorder,
-                    textPrimary = textPrimary,
                     onMenuClick = { menuOpen = true }
                 )
             }
             item { Spacer(Modifier.height(20.dp)) }
 
-            // Quick access cards — slide up and hide when tasks expanded
             item {
                 AnimatedVisibility(
                     visible = !tasksExpanded,
@@ -102,7 +85,6 @@ fun HomeScreen(
                 }
             }
 
-            // Tasks header — tappable to expand/collapse
             item {
                 Row(
                     modifier = Modifier
@@ -117,9 +99,8 @@ fun HomeScreen(
                         text = "Tasks",
                         fontWeight = FontWeight.Black,
                         fontSize = 36.sp,
-                        color = textPrimary
+                        color = colorScheme.onBackground
                     )
-                    // Animated chevron rotates when expanded
                     val rotation by animateFloatAsState(
                         targetValue = if (tasksExpanded) 180f else 0f,
                         label = "chevron"
@@ -128,13 +109,13 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(PrimaryBlue.copy(alpha = 0.12f)),
+                            .background(colorScheme.primary.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = if (tasksExpanded) "Collapse" else "Expand",
-                            tint = PrimaryBlue,
+                            tint = colorScheme.primary,
                             modifier = Modifier
                                 .size(22.dp)
                                 .graphicsLayer { rotationZ = rotation }
@@ -143,7 +124,6 @@ fun HomeScreen(
                 }
             }
 
-            // Today's date label — only visible when expanded
             item {
                 AnimatedVisibility(
                     visible = tasksExpanded,
@@ -151,8 +131,7 @@ fun HomeScreen(
                     exit = fadeOut() + shrinkVertically()
                 ) {
                     val todayLabel = remember {
-                        java.text.SimpleDateFormat("EEEE, MMM d", java.util.Locale.getDefault())
-                            .format(java.util.Date())
+                        SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date())
                     }
                     Column {
                         Spacer(Modifier.height(4.dp))
@@ -160,7 +139,7 @@ fun HomeScreen(
                             text = "Today · $todayLabel",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = PrimaryBlue,
+                            color = colorScheme.primary,
                             letterSpacing = 0.3.sp
                         )
                     }
@@ -172,18 +151,15 @@ fun HomeScreen(
             item {
                 TaskListCard(
                     tasks = tasks,
-                    isDarkTheme = isDarkTheme,
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) }
                 )
             }
             item { Spacer(Modifier.height(20.dp)) }
         }
 
-        // ── Bottom bar + FAB ──────────────────────────────────────────────
+        // Bottom bar + FAB
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
+            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
         ) {
             Box(
                 modifier = Modifier
@@ -191,7 +167,7 @@ fun HomeScreen(
                     .height(65.dp)
                     .padding(top = 10.dp)
                     .background(
-                        color = PrimaryBlue,
+                        color = colorScheme.primary,
                         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
                     )
             )
@@ -199,7 +175,7 @@ fun HomeScreen(
                 onClick = onAddClick,
                 shape = CircleShape,
                 containerColor = Color.White,
-                contentColor = PrimaryBlue,
+                contentColor = colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = (-15).dp)
@@ -210,14 +186,12 @@ fun HomeScreen(
             }
         }
 
-        // ── Scrim: fades in/out independently, no slide ──────────────────
+        // Scrim
         AnimatedVisibility(
             visible = menuOpen,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(10f)
+            modifier = Modifier.fillMaxSize().zIndex(10f)
         ) {
             Box(
                 modifier = Modifier
@@ -227,14 +201,12 @@ fun HomeScreen(
             )
         }
 
-        // ── Drawer panel: slides in/out only, no fade ─────────────────────
+        // Drawer
         AnimatedVisibility(
             visible = menuOpen,
             enter = slideInHorizontally(initialOffsetX = { it }),
             exit = slideOutHorizontally(targetOffsetX = { it }),
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(11f)
+            modifier = Modifier.fillMaxSize().zIndex(11f)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 Box(
@@ -243,17 +215,14 @@ fun HomeScreen(
                         .fillMaxWidth(0.72f)
                         .align(Alignment.CenterEnd)
                         .background(
-                            color = if (isDarkTheme) Color(0xFF1A1A2E) else Color.White,
+                            color = colorScheme.surface,
                             shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
                         )
-                        .clickable { /* consume clicks so scrim doesn't close */ }
+                        .clickable { /* consume */ }
                 ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(28.dp)
+                        modifier = Modifier.fillMaxSize().padding(28.dp)
                     ) {
-                        // Close button
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
@@ -263,41 +232,38 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFEEEEEE).copy(alpha = 0.3f))
+                                    .background(colorScheme.onSurface.copy(alpha = 0.1f))
                             ) {
-                                Icon(Icons.Default.Close, "Close menu", tint = textPrimary)
+                                Icon(Icons.Default.Close, "Close menu", tint = colorScheme.onSurface)
                             }
                         }
 
                         Spacer(Modifier.height(16.dp))
 
-                        // User greeting in drawer
                         Text(
                             text = if (firstName.isBlank()) "Hello!" else "Hi, $firstName 👋",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Black,
-                            color = textPrimary
+                            color = colorScheme.onSurface
                         )
 
                         Spacer(Modifier.height(8.dp))
 
-                        // Accent divider
                         Box(
                             modifier = Modifier
                                 .width(40.dp)
                                 .height(3.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(PrimaryBlue)
+                                .background(colorScheme.primary)
                         )
 
                         Spacer(Modifier.height(36.dp))
 
-                        // Dark mode toggle row
                         DrawerMenuItem(
                             label = if (isDarkTheme) "Light Mode" else "Dark Mode",
                             icon = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                             iconTint = Color(0xFFFFD700),
-                            textColor = textPrimary,
+                            textColor = colorScheme.onSurface,
                             onClick = {
                                 onToggleDarkMode()
                                 menuOpen = false
@@ -305,15 +271,14 @@ fun HomeScreen(
                         )
 
                         Spacer(Modifier.height(16.dp))
-                        HorizontalDivider(color = textPrimary.copy(alpha = 0.1f))
+                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
                         Spacer(Modifier.height(16.dp))
 
-                        // Logout row
                         DrawerMenuItem(
                             label = "Log Out",
                             icon = Icons.Default.Logout,
-                            iconTint = Color(0xFFFF6B6B),
-                            textColor = Color(0xFFFF6B6B),
+                            iconTint = colorScheme.error,
+                            textColor = colorScheme.error,
                             onClick = {
                                 menuOpen = false
                                 onLogout()
@@ -322,11 +287,10 @@ fun HomeScreen(
 
                         Spacer(Modifier.weight(1f))
 
-                        // App version at bottom
                         Text(
                             "v1.0.0",
                             fontSize = 11.sp,
-                            color = textPrimary.copy(alpha = 0.3f)
+                            color = colorScheme.onSurface.copy(alpha = 0.3f)
                         )
                     }
                 }
@@ -335,7 +299,6 @@ fun HomeScreen(
     }
 }
 
-// ── Drawer Menu Item ──────────────────────────────────────────────────────────
 @Composable
 fun DrawerMenuItem(
     label: String,
@@ -366,16 +329,12 @@ fun DrawerMenuItem(
     }
 }
 
-// ── Home Header (card style matching the design image) ────────────────────────
 @Composable
 fun HomeHeader(
     firstName: String,
-    isDarkTheme: Boolean,
-    cardBg: Color,
-    cardBorder: Color,
-    textPrimary: Color,
     onMenuClick: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val greeting = remember {
         when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
             in 5..11  -> "Good morning"
@@ -390,13 +349,12 @@ fun HomeHeader(
     val displayName = if (firstName.isBlank()) "there" else firstName
 
     Column {
-        // ── The header "text box" card ────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .border(2.dp, cardBorder, RoundedCornerShape(20.dp))
-                .background(cardBg)
+                .border(2.dp, colorScheme.outline, RoundedCornerShape(20.dp))
+                .background(colorScheme.surface)
         ) {
             Row(
                 modifier = Modifier
@@ -405,13 +363,12 @@ fun HomeHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Left side: greeting + name + date
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "$greeting, $displayName",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
-                        color = textPrimary,
+                        color = colorScheme.onSurface,
                         lineHeight = 26.sp
                     )
                     Spacer(Modifier.height(4.dp))
@@ -419,36 +376,30 @@ fun HomeHeader(
                         text = dateString,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Light,
-                        color = textPrimary.copy(alpha = 0.45f),
+                        color = colorScheme.onSurface.copy(alpha = 0.45f),
                         letterSpacing = 0.3.sp
                     )
                 }
 
                 Spacer(Modifier.width(12.dp))
-
-                // Right side: hamburger menu button
-                HamburgerButton(
-                    color = textPrimary,
-                    onClick = onMenuClick
-                )
+                HamburgerButton(onClick = onMenuClick)
             }
         }
 
-        // ── Accent line beneath the card matching bottom bar ──────────────
         Spacer(Modifier.height(6.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(3.dp)
                 .clip(RoundedCornerShape(50))
-                .background(PrimaryBlue)
+                .background(colorScheme.primary)
         )
     }
 }
 
-// ── Hamburger Button (3 animated bars) ───────────────────────────────────────
 @Composable
-fun HamburgerButton(color: Color, onClick: () -> Unit) {
+fun HamburgerButton(onClick: () -> Unit) {
+    val color = MaterialTheme.colorScheme.onBackground
     Box(
         modifier = Modifier
             .size(44.dp)
@@ -461,38 +412,22 @@ fun HamburgerButton(color: Color, onClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(5.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Bar 1 — full width
             Box(
-                modifier = Modifier
-                    .width(22.dp)
-                    .height(2.5.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(color)
+                modifier = Modifier.width(22.dp).height(2.5.dp).clip(RoundedCornerShape(50)).background(color)
             )
-            // Bar 2 — slightly shorter for style
             Box(
                 modifier = Modifier
-                    .width(16.dp)
-                    .height(2.5.dp)
-                    .clip(RoundedCornerShape(50))
-                    .align(Alignment.Start)
-                    .offset(x = 3.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(PrimaryBlue)
+                    .width(16.dp).height(2.5.dp).clip(RoundedCornerShape(50))
+                    .align(Alignment.Start).offset(x = 3.dp)
+                    .background(MaterialTheme.colorScheme.primary)
             )
-            // Bar 3 — full width
             Box(
-                modifier = Modifier
-                    .width(22.dp)
-                    .height(2.5.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(color)
+                modifier = Modifier.width(22.dp).height(2.5.dp).clip(RoundedCornerShape(50)).background(color)
             )
         }
     }
 }
 
-// ── Quick Access Row ──────────────────────────────────────────────────────────
 @Composable
 fun QuickAccessRow(
     onCalendarClick: () -> Unit,
@@ -549,20 +484,18 @@ fun QuickAccessCard(
     }
 }
 
-// ── Task List Card ────────────────────────────────────────────────────────────
 @Composable
 fun TaskListCard(
     tasks: List<Task>,
-    isDarkTheme: Boolean = false,
     onCheckedChange: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val cardBg = if (isDarkTheme) Color(0xFF1A1A2E) else Color.White
+    val colorScheme = MaterialTheme.colorScheme
 
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column {
@@ -571,17 +504,20 @@ fun TaskListCard(
                     modifier = Modifier.fillMaxWidth().padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No tasks yet. Tap + to add one!", color = Color.Gray, fontSize = 14.sp)
+                    Text(
+                        "No tasks yet. Tap + to add one!",
+                        color = colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
                 }
             } else {
                 tasks.forEachIndexed { index, task ->
                     TaskItem(
                         task = task,
-                        isDarkTheme = isDarkTheme,
                         onCheckedChange = { onCheckedChange(task) }
                     )
                     if (index < tasks.lastIndex) {
-                        HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f), thickness = 1.dp)
                     }
                 }
             }
@@ -590,14 +526,13 @@ fun TaskListCard(
     }
 }
 
-// ── Task Item ─────────────────────────────────────────────────────────────────
 @Composable
 fun TaskItem(
     task: Task,
-    isDarkTheme: Boolean = false,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    val textColor = if (isDarkTheme) Color(0xFFE8E4FF) else Color(0xFF1A1A2E)
+    val colorScheme = MaterialTheme.colorScheme
+    val textColor = colorScheme.onSurface
 
     Column(
         modifier = Modifier
@@ -609,8 +544,8 @@ fun TaskItem(
                 checked = task.isChecked,
                 onCheckedChange = onCheckedChange,
                 colors = CheckboxDefaults.colors(
-                    uncheckedColor = Color(0xFFCCCCCC),
-                    checkedColor = PrimaryBlue
+                    uncheckedColor = colorScheme.outline,
+                    checkedColor = colorScheme.primary
                 ),
                 modifier = Modifier.size(24.dp).padding(top = 2.dp)
             )
@@ -629,7 +564,6 @@ fun TaskItem(
     }
 }
 
-// ── Category Chip ─────────────────────────────────────────────────────────────
 @Composable
 fun CategoryChip(category: String) {
     val (bg, textColor) = when (category.uppercase()) {
