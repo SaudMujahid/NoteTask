@@ -27,6 +27,12 @@ val ChipWorkText = Color(0xFF4CAF50)
 val ChipMentalBg = Color(0xFFFCE4EC)
 val ChipMentalText = Color(0xFFEC407A)
 
+// Status Badge Colors
+val PendingBadgeBg = Color(0xFFFFF4CC)
+val PendingBadgeBorder = Color(0xFFC99700)
+val CompletedBadgeBg = Color(0xFFE3F2FD)
+val CompletedBadgeBorder = Color(0xFF1565C0)
+
 // Auth Screen Colors (Login/SignUp)
 val LoginBgGray = Color(0xFFE2E4EC)
 val DarkNavy = Color(0xFF1A1040)

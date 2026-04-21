@@ -607,7 +607,6 @@ fun DayView(viewModel: CalendarViewModel) {
             item {
                 CollapsibleTaskCard(
                     title = "Today's Tasks",
-                    taskCount = tasksForSelectedDate.size,
                     isExpanded = isTodaysTasksExpanded,
                     onToggleExpand = { viewModel.toggleTodaysTasksExpanded() },
                     tasks = tasksForSelectedDate,
@@ -695,7 +694,6 @@ fun DateChipItem(
 @Composable
 fun CollapsibleTaskCard(
     title: String,
-    taskCount: Int,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
     tasks: List<Task>,
@@ -719,6 +717,9 @@ fun CollapsibleTaskCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            val pendingTasks = tasks.count { !it.isChecked }
+            val completedTasks = tasks.count { it.isChecked }
+
             // Header
             Row(
                 modifier = Modifier
@@ -742,11 +743,23 @@ fun CollapsibleTaskCard(
                             fontWeight = FontWeight.Bold,
                             color = colorScheme.onSurface
                         )
-                        Text(
-                            text = "$taskCount ${if (taskCount == 1) "task" else "tasks"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.onSurfaceVariant
-                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatusBadge(
+                                text = "pending",
+                                backgroundColor = PendingBadgeBg,
+                                borderColor = PendingBadgeBorder,
+                                contentColor = PendingBadgeBorder,
+                                count = pendingTasks
+                            )
+                            StatusBadge(
+                                text = "completed",
+                                backgroundColor = CompletedBadgeBg,
+                                borderColor = CompletedBadgeBorder,
+                                contentColor = CompletedBadgeBorder,
+                                count = completedTasks
+                            )
+                        }
                     }
                 }
                 Icon(
@@ -792,6 +805,29 @@ fun CollapsibleTaskCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun StatusBadge(
+    text: String,
+    backgroundColor: Color,
+    borderColor: Color,
+    contentColor: Color,
+    count: Int
+) {
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Text(
+            text = "$count $text",
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = contentColor
+        )
     }
 }
 
