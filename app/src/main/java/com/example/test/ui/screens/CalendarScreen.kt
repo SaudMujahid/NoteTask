@@ -1,10 +1,14 @@
 package com.example.test.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -12,12 +16,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,49 +35,284 @@ import com.example.test.data.models.Task
 import com.example.test.ui.theme.*
 import com.example.test.ui.viewmodels.CalendarDay
 import com.example.test.ui.viewmodels.CalendarViewModel
+import com.example.test.ui.viewmodels.CalendarViewMode
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
+    viewModel: CalendarViewModel,
+    onNavigateBack: () -> Unit = {},
+    onNavigateHome: () -> Unit = {}
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val viewMode by viewModel.viewMode.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.setViewMode(CalendarViewMode.DAY)
+    }
+
+    Scaffold(
+        topBar = {
+            CalendarTopBar(
+                viewMode = viewMode,
+                onBackClick = {
+                    val shouldNavigateToHome = !viewModel.goBack()
+                    if (shouldNavigateToHome) {
+                        onNavigateBack()
+                    }
+                },
+                onHomeClick = onNavigateHome,
+                viewModel = viewModel
+            )
+        },
+        containerColor = colorScheme.background
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when (viewMode) {
+                CalendarViewMode.YEAR -> YearView(viewModel = viewModel)
+                CalendarViewMode.MONTH -> MonthView(viewModel = viewModel)
+                CalendarViewMode.DAY -> DayView(viewModel = viewModel)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CalendarTopBar(
+    viewMode: CalendarViewMode,
+    onBackClick: () -> Unit,
+    onHomeClick: () -> Unit,
     viewModel: CalendarViewModel
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val currentMonth by viewModel.currentMonth.collectAsState()
+    val currentYear by viewModel.currentYear.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
-    val calendarDays by viewModel.calendarDays.collectAsState()
-    val tasksForSelectedDate by viewModel.tasksForSelectedDate.collectAsState()
-
+    
     val monthYearFormatter = remember { SimpleDateFormat("MMMM yyyy", Locale.getDefault()) }
-    val selectedDateFormatter = remember { SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()) }
+    val dayFormatter = remember { SimpleDateFormat("EEEE, MMM d, yyyy", Locale.getDefault()) }
+
+    val title = when (viewMode) {
+        CalendarViewMode.YEAR -> currentYear.toString()
+        CalendarViewMode.MONTH -> monthYearFormatter.format(currentMonth.time)
+        CalendarViewMode.DAY -> dayFormatter.format(selectedDate)
+    }
+
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                color = colorScheme.onBackground
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = colorScheme.onBackground
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = onHomeClick) {
+                Icon(
+                    imageVector = Icons.Default.Home,
+                    contentDescription = "Back to Home",
+                    tint = colorScheme.onBackground
+                )
+            }
+
+            IconButton(onClick = { viewModel.goToToday() }) {
+                Icon(
+                    imageVector = Icons.Default.Today,
+                    contentDescription = "Today",
+                    tint = colorScheme.primary
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = colorScheme.background
+        )
+    )
+}
+
+// year view with month cards and year navigation
+@Composable
+fun YearView(viewModel: CalendarViewModel) {
+    val colorScheme = MaterialTheme.colorScheme
+    val currentYear by viewModel.currentYear.collectAsState()
+    
+    val months = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(colorScheme.background)
             .padding(16.dp)
     ) {
-        // Header with month/year and navigation
-        CalendarHeader(
-            currentMonth = monthYearFormatter.format(currentMonth.time),
-            onPreviousMonth = { viewModel.previousMonth() },
-            onNextMonth = { viewModel.nextMonth() },
-            onToday = { viewModel.goToToday() }
-        )
+        // Year navigation
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { viewModel.previousYear() }) {
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    contentDescription = "Previous Year",
+                    tint = colorScheme.primary
+                )
+            }
+            
+            Text(
+                text = currentYear.toString(),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = colorScheme.onBackground
+            )
+            
+            IconButton(onClick = { viewModel.nextYear() }) {
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = "Next Year",
+                    tint = colorScheme.primary
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Days of week header
+        // Month grid
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            contentPadding = PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(12) { index ->
+                MonthCard(
+                    monthName = months[index],
+                    monthIndex = index,
+                    isCurrentMonth = isCurrentYearMonth(currentYear, index),
+                    onClick = { viewModel.navigateToMonth(index) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthCard(
+    monthName: String,
+    monthIndex: Int,
+    isCurrentMonth: Boolean,
+    onClick: () -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1.2f),
+        shape = RoundedCornerShape(16.dp),
+        color = if (isCurrentMonth) colorScheme.primaryContainer else colorScheme.surface,
+        border = if (isCurrentMonth) {
+            BorderStroke(2.dp, colorScheme.primary)
+        } else null,
+        tonalElevation = 2.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = monthName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (isCurrentMonth) FontWeight.Bold else FontWeight.Medium,
+                color = if (isCurrentMonth) colorScheme.onPrimaryContainer else colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+private fun isCurrentYearMonth(year: Int, month: Int): Boolean {
+    val today = Calendar.getInstance()
+    return today.get(Calendar.YEAR) == year && today.get(Calendar.MONTH) == month
+}
+
+// month view with calendar grid and month navigation
+@Composable
+fun MonthView(viewModel: CalendarViewModel) {
+    val colorScheme = MaterialTheme.colorScheme
+    val calendarDays by viewModel.calendarDays.collectAsState()
+    val selectedDate by viewModel.selectedDate.collectAsState()
+    val tasksForSelectedDate by viewModel.tasksForSelectedDate.collectAsState()
+    val selectedDateFormatter = remember { SimpleDateFormat("EEE, MMM d", Locale.getDefault()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        // Month navigation
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { viewModel.previousMonth() },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(colorScheme.surface, CircleShape)
+            ) {
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    contentDescription = "Previous Month",
+                    tint = colorScheme.primary
+                )
+            }
+
+            IconButton(
+                onClick = { viewModel.nextMonth() },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(colorScheme.surface, CircleShape)
+            ) {
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = "Next Month",
+                    tint = colorScheme.primary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         DaysOfWeekHeader()
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Calendar grid
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .height(300.dp),
             contentPadding = PaddingValues(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -80,89 +321,49 @@ fun CalendarScreen(
                 CalendarDayCell(
                     day = day,
                     isSelected = isSameDay(day.date, selectedDate),
-                    onClick = { viewModel.selectDate(day.date) }
+                    onClick = { viewModel.selectDateAndNavigateToDay(day.date) }
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Tasks for selected date
-        TasksForDateSection(
-            selectedDate = selectedDateFormatter.format(selectedDate),
-            tasks = tasksForSelectedDate,
-            onTaskToggle = { viewModel.toggleTask(it) },
-            onTaskDelete = { viewModel.deleteTask(it) }
-        )
-    }
-}
-
-private fun isSameDay(date1: Date, date2: Date): Boolean {
-    val cal1 = Calendar.getInstance().apply { time = date1 }
-    val cal2 = Calendar.getInstance().apply { time = date2 }
-    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-           cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
-}
-
-@Composable
-fun CalendarHeader(
-    currentMonth: String,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    onToday: () -> Unit
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
         Text(
-            text = currentMonth,
-            style = MaterialTheme.typography.headlineSmall,
+            text = "Tasks for ${selectedDateFormatter.format(selectedDate)}",
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = colorScheme.onBackground
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            IconButton(
-                onClick = onToday,
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(colorScheme.surface, CircleShape)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (tasksForSelectedDate.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = colorScheme.surface)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Today,
-                    contentDescription = "Today",
-                    tint = colorScheme.primary
+                Text(
+                    text = "No tasks for selected date",
+                    modifier = Modifier.padding(16.dp),
+                    color = colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
-
-            IconButton(
-                onClick = onPreviousMonth,
+        } else {
+            LazyColumn(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(colorScheme.surface, CircleShape)
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.ChevronLeft,
-                    contentDescription = "Previous Month",
-                    tint = colorScheme.primary
-                )
-            }
-
-            IconButton(
-                onClick = onNextMonth,
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(colorScheme.surface, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Next Month",
-                    tint = colorScheme.primary
-                )
+                items(tasksForSelectedDate, key = { it.id }) { task ->
+                    TaskItemRow(
+                        task = task,
+                        onToggle = { viewModel.toggleTask(task) },
+                        onDelete = { viewModel.deleteTask(task) }
+                    )
+                }
             }
         }
     }
@@ -236,7 +437,6 @@ fun CalendarDayCell(
                 color = textColor
             )
 
-            // Task indicators (dots)
             if (day.tasks.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Row(
@@ -273,54 +473,221 @@ fun CalendarDayCell(
     }
 }
 
+// day view with date strip and today's tasks, schedule cards
 @Composable
-fun TasksForDateSection(
-    selectedDate: String,
+fun DayView(viewModel: CalendarViewModel) {
+    val colorScheme = MaterialTheme.colorScheme
+    val weekDates by viewModel.weekDates.collectAsState()
+    val selectedDate by viewModel.selectedDate.collectAsState()
+    val tasksForSelectedDate by viewModel.tasksForSelectedDate.collectAsState()
+    val isTodaysTasksExpanded by viewModel.isTodaysTasksExpanded.collectAsState()
+    val isScheduleExpanded by viewModel.isScheduleExpanded.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colorScheme.background)
+    ) {
+        // Date strip
+        DateStripRow(
+            dates = weekDates,
+            selectedDate = selectedDate,
+            onDateClick = { viewModel.selectDate(it) }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Today's Tasks Card
+            item {
+                CollapsibleTaskCard(
+                    title = "Today's Tasks",
+                    taskCount = tasksForSelectedDate.size,
+                    isExpanded = isTodaysTasksExpanded,
+                    onToggleExpand = { viewModel.toggleTodaysTasksExpanded() },
+                    tasks = tasksForSelectedDate,
+                    onTaskToggle = { viewModel.toggleTask(it) },
+                    onTaskDelete = { viewModel.deleteTask(it) }
+                )
+            }
+
+            // Schedule Card
+            item {
+                CollapsibleScheduleCard(
+                    isExpanded = isScheduleExpanded,
+                    onToggleExpand = { viewModel.toggleScheduleExpanded() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DateStripRow(
+    dates: List<Date>,
+    selectedDate: Date,
+    onDateClick: (Date) -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colorScheme.surface)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
+        items(dates) { date ->
+            DateChipItem(
+                date = date,
+                isSelected = isSameDay(date, selectedDate),
+                onClick = { onDateClick(date) }
+            )
+        }
+    }
+}
+
+@Composable
+fun DateChipItem(
+    date: Date,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val dayOfWeekFormatter = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
+    val dayOfMonthFormatter = remember { SimpleDateFormat("d", Locale.getDefault()) }
+    
+    val dayOfWeek = dayOfWeekFormatter.format(date)
+    val dayOfMonth = dayOfMonthFormatter.format(date)
+
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isSelected) colorScheme.primary else colorScheme.surfaceVariant
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = dayOfWeek.uppercase(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = dayOfMonth,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+fun CollapsibleTaskCard(
+    title: String,
+    taskCount: Int,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     tasks: List<Task>,
     onTaskToggle: (Task) -> Unit,
     onTaskDelete: (Task) -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 250.dp)
-            .background(colorScheme.surface, RoundedCornerShape(12.dp))
-            .padding(16.dp)
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        label = "rotation"
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Text(
-            text = selectedDate,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (tasks.isEmpty()) {
-            Box(
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp),
-                contentAlignment = Alignment.Center
+                    .clickable(onClick = onToggleExpand),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "No tasks for this day",
-                    color = colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.onSurface
+                        )
+                        Text(
+                            text = "$taskCount ${if (taskCount == 1) "task" else "tasks"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.rotate(rotationAngle)
                 )
             }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+
+            // Expandable content
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
             ) {
-                items(tasks) { task ->
-                    TaskItemCard(
-                        task = task,
-                        onToggle = { onTaskToggle(task) },
-                        onDelete = { onTaskDelete(task) }
-                    )
+                Column(modifier = Modifier.padding(top = 16.dp)) {
+                    if (tasks.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No tasks for this day",
+                                color = colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    } else {
+                        tasks.forEach { task ->
+                            TaskItemRow(
+                                task = task,
+                                onToggle = { onTaskToggle(task) },
+                                onDelete = { onTaskDelete(task) }
+                            )
+                            if (task != tasks.last()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -328,7 +695,104 @@ fun TasksForDateSection(
 }
 
 @Composable
-fun TaskItemCard(
+fun CollapsibleScheduleCard(
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        label = "rotation"
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggleExpand),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Schedule",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.rotate(rotationAngle)
+                )
+            }
+
+            // Expandable content - Timeline
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(modifier = Modifier.padding(top = 16.dp)) {
+                    TimelineView()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TimelineView() {
+    val colorScheme = MaterialTheme.colorScheme
+    val times = listOf(
+        "6:00", "7:00", "8:00", "9:00", "10:00", "11:00",
+        "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+        "18:00", "19:00", "20:00", "21:00"
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        times.forEach { time ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = time,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(60.dp)
+                )
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = colorScheme.outlineVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TaskItemRow(
     task: Task,
     onToggle: () -> Unit,
     onDelete: () -> Unit
@@ -386,4 +850,11 @@ fun TaskItemCard(
             )
         }
     }
+}
+
+private fun isSameDay(date1: Date, date2: Date): Boolean {
+    val cal1 = Calendar.getInstance().apply { time = date1 }
+    val cal2 = Calendar.getInstance().apply { time = date2 }
+    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+           cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }

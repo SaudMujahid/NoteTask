@@ -117,7 +117,11 @@ fun MyApp(
                 }
 
                 composable("calendar") {
-                    CalendarScreen(viewModel = calendarViewModel)
+                    CalendarScreen(
+                        viewModel = calendarViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateHome = { navController.popBackStack("home", false) }
+                    )
                 }
 
                 composable("notes") { NotesScreen() }

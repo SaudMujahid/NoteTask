@@ -19,13 +19,26 @@ data class CalendarDay(
     val tasks: List<Task> = emptyList()
 )
 
+enum class CalendarViewMode {
+    YEAR, MONTH, DAY
+}
+
 class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel() {
+
+    private val _viewMode = MutableStateFlow(CalendarViewMode.MONTH)
+    val viewMode: StateFlow<CalendarViewMode> = _viewMode.asStateFlow()
+
+    private val _currentYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR))
+    val currentYear: StateFlow<Int> = _currentYear.asStateFlow()
 
     private val _currentMonth = MutableStateFlow(Calendar.getInstance())
     val currentMonth: StateFlow<Calendar> = _currentMonth.asStateFlow()
 
     private val _selectedDate = MutableStateFlow(Date())
     val selectedDate: StateFlow<Date> = _selectedDate.asStateFlow()
+
+    private val _weekDates = MutableStateFlow<List<Date>>(emptyList())
+    val weekDates: StateFlow<List<Date>> = _weekDates.asStateFlow()
 
     private val _allTasks = MutableStateFlow<List<Task>>(emptyList())
     val allTasks: StateFlow<List<Task>> = _allTasks.asStateFlow()
@@ -36,7 +49,18 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
     private val _tasksForSelectedDate = MutableStateFlow<List<Task>>(emptyList())
     val tasksForSelectedDate: StateFlow<List<Task>> = _tasksForSelectedDate.asStateFlow()
 
+    // Collapsible sections for Day View
+    private val _isTodaysTasksExpanded = MutableStateFlow(true)
+    val isTodaysTasksExpanded: StateFlow<Boolean> = _isTodaysTasksExpanded.asStateFlow()
+
+    private val _isScheduleExpanded = MutableStateFlow(true)
+    val isScheduleExpanded: StateFlow<Boolean> = _isScheduleExpanded.asStateFlow()
+
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    init {
+        generateWeekDates()
+    }
 
     fun setUser(userId: Long) {
         viewModelScope.launch {
@@ -48,11 +72,66 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
         }
     }
 
+    // View Mode Navigation
+    fun setViewMode(mode: CalendarViewMode) {
+        _viewMode.value = mode
+        if (mode == CalendarViewMode.DAY) {
+            generateWeekDates()
+        }
+    }
+
+    fun navigateToMonth(month: Int) {
+        val newMonth = Calendar.getInstance()
+        newMonth.set(Calendar.YEAR, _currentYear.value)
+        newMonth.set(Calendar.MONTH, month)
+        _currentMonth.value = newMonth
+        _viewMode.value = CalendarViewMode.MONTH
+        generateCalendarDays()
+    }
+
+    fun navigateToDayView() {
+        _viewMode.value = CalendarViewMode.DAY
+        generateWeekDates()
+    }
+
+    fun goBack(): Boolean {
+        return when (_viewMode.value) {
+            CalendarViewMode.DAY -> {
+                _viewMode.value = CalendarViewMode.MONTH
+                true
+            }
+            CalendarViewMode.MONTH -> {
+                _viewMode.value = CalendarViewMode.YEAR
+                true
+            }
+            CalendarViewMode.YEAR -> false // Return to home
+        }
+    }
+
+    // Collapsible sections
+    fun toggleTodaysTasksExpanded() {
+        _isTodaysTasksExpanded.value = !_isTodaysTasksExpanded.value
+    }
+
+    fun toggleScheduleExpanded() {
+        _isScheduleExpanded.value = !_isScheduleExpanded.value
+    }
+
+    // Date Selection
     fun selectDate(date: Date) {
         _selectedDate.value = date
         updateTasksForSelectedDate()
+        generateWeekDates()
     }
 
+    fun selectDateAndNavigateToDay(date: Date) {
+        _selectedDate.value = date
+        _viewMode.value = CalendarViewMode.DAY
+        updateTasksForSelectedDate()
+        generateWeekDates()
+    }
+
+    // Month/Year Navigation
     fun nextMonth() {
         val newMonth = _currentMonth.value.clone() as Calendar
         newMonth.add(Calendar.MONTH, 1)
@@ -67,21 +146,49 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
         generateCalendarDays()
     }
 
+    fun nextYear() {
+        _currentYear.value += 1
+    }
+
+    fun previousYear() {
+        _currentYear.value -= 1
+    }
+
     fun goToToday() {
-        _currentMonth.value = Calendar.getInstance()
-        _selectedDate.value = Date()
+        val today = Calendar.getInstance()
+        _currentMonth.value = today
+        _selectedDate.value = today.time
+        _currentYear.value = today.get(Calendar.YEAR)
         generateCalendarDays()
+        generateWeekDates()
         updateTasksForSelectedDate()
     }
 
+    // Generate week dates for Day View (7 days centered around selected date)
+    private fun generateWeekDates() {
+        val selectedCal = Calendar.getInstance()
+        selectedCal.time = _selectedDate.value
+        
+        // Start from 3 days before selected date
+        val startCal = selectedCal.clone() as Calendar
+        startCal.add(Calendar.DAY_OF_MONTH, -3)
+        
+        val dates = mutableListOf<Date>()
+        for (i in 0..6) {
+            dates.add(startCal.time)
+            startCal.add(Calendar.DAY_OF_MONTH, 1)
+        }
+        
+        _weekDates.value = dates
+    }
+
+    // Generate calendar days for Month View
     private fun generateCalendarDays() {
         val month = _currentMonth.value.clone() as Calendar
         month.set(Calendar.DAY_OF_MONTH, 1)
         
         val firstDayOfWeek = month.get(Calendar.DAY_OF_WEEK)
-        val daysInMonth = month.getActualMaximum(Calendar.DAY_OF_MONTH)
         
-        // Start from Sunday of the week containing the 1st
         val startCalendar = month.clone() as Calendar
         startCalendar.add(Calendar.DAY_OF_MONTH, -(firstDayOfWeek - 1))
         
@@ -92,7 +199,6 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
         today.set(Calendar.SECOND, 0)
         today.set(Calendar.MILLISECOND, 0)
         
-        // Generate 42 days (6 weeks) for consistent grid
         for (i in 0 until 42) {
             val currentDay = startCalendar.clone() as Calendar
             val dayDate = currentDay.time
@@ -101,7 +207,6 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
             val isToday = currentDay.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
                          currentDay.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
             
-            // Get tasks for this date
             val dateStr = dateFormatter.format(dayDate)
             val tasksForDate = _allTasks.value.filter { task ->
                 task.date == dateStr
