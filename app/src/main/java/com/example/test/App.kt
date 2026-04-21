@@ -28,6 +28,7 @@ fun MyApp(
     val authViewModel: AuthViewModel = viewModel(factory = ViewModelFactory(userRepository))
     val taskViewModel: TaskViewModel = viewModel(factory = ViewModelFactory(taskRepository))
     val noteViewModel: NoteViewModel = viewModel(factory = ViewModelFactory(noteRepository))
+    val calendarViewModel: CalendarViewModel = viewModel(factory = ViewModelFactory(taskRepository))
 
     val currentUser by authViewModel.currentUser.collectAsState()
 
@@ -35,6 +36,7 @@ fun MyApp(
         currentUser?.let { user ->
             taskViewModel.setUser(user.id)
             noteViewModel.setUser(user.id)
+            calendarViewModel.setUser(user.id)
         }
     }
 
@@ -114,7 +116,9 @@ fun MyApp(
                     }
                 }
 
-                composable("calendar") { CalendarScreen() }
+                composable("calendar") {
+                    CalendarScreen(viewModel = calendarViewModel)
+                }
 
                 composable("notes") { NotesScreen() }
             }

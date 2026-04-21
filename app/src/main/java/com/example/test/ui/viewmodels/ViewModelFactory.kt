@@ -16,6 +16,8 @@ class ViewModelFactory(private val repository: Any) : ViewModelProvider.Factory 
                 TaskViewModel(repository as TaskRepository) as T
             modelClass.isAssignableFrom(NoteViewModel::class.java) ->
                 NoteViewModel(repository as NoteRepository) as T
+            modelClass.isAssignableFrom(CalendarViewModel::class.java) ->
+                CalendarViewModel(repository as TaskRepository) as T
             else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
         }
     }
