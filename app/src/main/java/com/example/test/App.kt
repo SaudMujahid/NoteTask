@@ -119,7 +119,6 @@ fun MyApp(
                 composable("calendar") {
                     CalendarScreen(
                         viewModel = calendarViewModel,
-                        onNavigateBack = { navController.popBackStack() },
                         onNavigateHome = { navController.popBackStack("home", false) }
                     )
                 }

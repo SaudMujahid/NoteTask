@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,6 +35,7 @@ import com.example.test.ui.theme.*
 import com.example.test.ui.viewmodels.CalendarDay
 import com.example.test.ui.viewmodels.CalendarViewModel
 import com.example.test.ui.viewmodels.CalendarViewMode
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,41 +43,142 @@ import java.util.*
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel,
-    onNavigateBack: () -> Unit = {},
     onNavigateHome: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val viewMode by viewModel.viewMode.collectAsState()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.setViewMode(CalendarViewMode.DAY)
     }
 
-    Scaffold(
-        topBar = {
-            CalendarTopBar(
-                viewMode = viewMode,
-                onBackClick = {
-                    val shouldNavigateToHome = !viewModel.goBack()
-                    if (shouldNavigateToHome) {
-                        onNavigateBack()
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContentColor = BorderBlue
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(BackgroundGray.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Calendar Views",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = BorderBlue
+                    )
+                    IconButton(onClick = { scope.launch { drawerState.close() } }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close menu",
+                            tint = BorderBlue
+                        )
                     }
-                },
-                onHomeClick = onNavigateHome,
-                viewModel = viewModel
-            )
-        },
-        containerColor = colorScheme.background
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            when (viewMode) {
-                CalendarViewMode.YEAR -> YearView(viewModel = viewModel)
-                CalendarViewMode.MONTH -> MonthView(viewModel = viewModel)
-                CalendarViewMode.DAY -> DayView(viewModel = viewModel)
+                }
+
+                NavigationDrawerItem(
+                    label = { Text("Year View") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = null
+                        )
+                    },
+                    selected = viewMode == CalendarViewMode.YEAR,
+                    onClick = {
+                        viewModel.setViewMode(CalendarViewMode.YEAR)
+                        scope.launch { drawerState.close() }
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = PrimaryBlue.copy(alpha = 0.18f),
+                        unselectedContainerColor = Color.Transparent,
+                        selectedTextColor = BorderBlue,
+                        unselectedTextColor = BorderBlue.copy(alpha = 0.8f),
+                        selectedIconColor = PrimaryBlue,
+                        unselectedIconColor = BorderBlue.copy(alpha = 0.8f)
+                    ),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Month View") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null
+                        )
+                    },
+                    selected = viewMode == CalendarViewMode.MONTH,
+                    onClick = {
+                        viewModel.setViewMode(CalendarViewMode.MONTH)
+                        scope.launch { drawerState.close() }
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = PrimaryBlue.copy(alpha = 0.18f),
+                        unselectedContainerColor = Color.Transparent,
+                        selectedTextColor = BorderBlue,
+                        unselectedTextColor = BorderBlue.copy(alpha = 0.8f),
+                        selectedIconColor = PrimaryBlue,
+                        unselectedIconColor = BorderBlue.copy(alpha = 0.8f)
+                    ),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Daily View") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Today,
+                            contentDescription = null
+                        )
+                    },
+                    selected = viewMode == CalendarViewMode.DAY,
+                    onClick = {
+                        viewModel.setViewMode(CalendarViewMode.DAY)
+                        scope.launch { drawerState.close() }
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = PrimaryBlue.copy(alpha = 0.18f),
+                        unselectedContainerColor = Color.Transparent,
+                        selectedTextColor = BorderBlue,
+                        unselectedTextColor = BorderBlue.copy(alpha = 0.8f),
+                        selectedIconColor = PrimaryBlue,
+                        unselectedIconColor = BorderBlue.copy(alpha = 0.8f)
+                    ),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                CalendarTopBar(
+                    viewMode = viewMode,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onHomeClick = onNavigateHome,
+                    viewModel = viewModel
+                )
+            },
+            containerColor = colorScheme.background
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                when (viewMode) {
+                    CalendarViewMode.YEAR -> YearView(viewModel = viewModel)
+                    CalendarViewMode.MONTH -> MonthView(viewModel = viewModel)
+                    CalendarViewMode.DAY -> DayView(viewModel = viewModel)
+                }
             }
         }
     }
@@ -87,7 +188,7 @@ fun CalendarScreen(
 @Composable
 fun CalendarTopBar(
     viewMode: CalendarViewMode,
-    onBackClick: () -> Unit,
+    onMenuClick: () -> Unit,
     onHomeClick: () -> Unit,
     viewModel: CalendarViewModel
 ) {
@@ -114,10 +215,10 @@ fun CalendarTopBar(
             )
         },
         navigationIcon = {
-            IconButton(onClick = onBackClick) {
+            IconButton(onClick = onMenuClick) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "Open view menu",
                     tint = colorScheme.onBackground
                 )
             }
