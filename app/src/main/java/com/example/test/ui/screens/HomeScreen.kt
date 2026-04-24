@@ -1,6 +1,5 @@
 package com.example.test.ui.screens
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,23 +11,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import com.example.test.data.models.Task
+import com.example.test.ui.components.DrawerMenu
+import com.example.test.ui.components.SwipeOffTaskItem
 import com.example.test.ui.components.TaskItem
-import com.example.test.ui.theme.*
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -39,8 +35,9 @@ fun HomeScreen(
     userId: Long?,
     firstName: String = "",
     isDarkTheme: Boolean = false,
+    isLoggedIn: Boolean = false,           // ← new: drives Login / Logout label
     onToggleDarkMode: () -> Unit = {},
-    onLogout: () -> Unit = {},
+    onAuthAction: () -> Unit = {},         // ← replaces onLogout; caller decides login or logout
     onAddClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onNotesClick: () -> Unit = {},
@@ -49,18 +46,19 @@ fun HomeScreen(
     val tasks by taskViewModel.tasks.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
 
-    // Only unchecked tasks on the home preview
     val pendingTasks = remember(tasks) { tasks.filter { !it.isChecked } }
-
     var menuOpen by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
 
+        // ── Main content ──────────────────────────────────────────────────
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 80.dp),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 20.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp, end = 16.dp, top = 20.dp, bottom = 20.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
@@ -79,7 +77,7 @@ fun HomeScreen(
                 Spacer(Modifier.height(24.dp))
             }
 
-            // Tasks header — opens fullscreen
+            // Tasks section header — tapping opens fullscreen
             item {
                 Row(
                     modifier = Modifier
@@ -116,6 +114,7 @@ fun HomeScreen(
             item { Spacer(Modifier.height(12.dp)) }
 
             item {
+                // TaskListCard now uses SwipeOffTaskItem internally
                 TaskListCard(
                     tasks = pendingTasks,
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) }
@@ -124,9 +123,11 @@ fun HomeScreen(
             item { Spacer(Modifier.height(20.dp)) }
         }
 
-        // Bottom bar + FAB
+        // ── Bottom bar + FAB ──────────────────────────────────────────────
         Box(
-            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
         ) {
             Box(
                 modifier = Modifier
@@ -153,148 +154,78 @@ fun HomeScreen(
             }
         }
 
-        // Scrim
-        AnimatedVisibility(
-            visible = menuOpen,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.fillMaxSize().zIndex(10f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f))
-                    .clickable { menuOpen = false }
-            )
-        }
+        // ── Drawer (extracted to its own composable) ──────────────────────
+        DrawerMenu(
+            isOpen = menuOpen,
+            firstName = firstName,
+            isDarkTheme = isDarkTheme,
+            isLoggedIn = isLoggedIn,
+            onClose = { menuOpen = false },
+            onToggleDarkMode = onToggleDarkMode,
+            onAuthAction = onAuthAction
+        )
+    }
+}
 
-        // Drawer
-        AnimatedVisibility(
-            visible = menuOpen,
-            enter = slideInHorizontally(initialOffsetX = { it }),
-            exit = slideOutHorizontally(targetOffsetX = { it }),
-            modifier = Modifier.fillMaxSize().zIndex(11f)
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+// ── TaskListCard ─────────────────────────────────────────────────────────────
+// Uses SwipeOffTaskItem so every row gets the shared animation + sound.
+
+@Composable
+fun TaskListCard(
+    tasks: List<Task>,
+    onCheckedChange: (Task) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column {
+            if (tasks.isEmpty()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(0.72f)
-                        .align(Alignment.CenterEnd)
-                        .background(
-                            color = colorScheme.surface,
-                            shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
-                        )
-                        .clickable { /* consume */ }
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(28.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            IconButton(
-                                onClick = { menuOpen = false },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(colorScheme.onSurface.copy(alpha = 0.1f))
-                            ) {
-                                Icon(Icons.Default.Close, "Close menu", tint = colorScheme.onSurface)
-                            }
-                        }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        Text(
-                            text = if (firstName.isBlank()) "Hello!" else "Hi, $firstName 👋",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            color = colorScheme.onSurface
+                    Text(
+                        "No pending tasks. Tap + to add one!",
+                        color = colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                }
+            } else {
+                tasks.forEachIndexed { index, task ->
+                    // ↓ SwipeOffTaskItem wraps each row with animation + sound
+                    SwipeOffTaskItem(
+                        checked = task.isChecked,
+                        onCheckedChange = { onCheckedChange(task) }
+                    ) { checked, onCheck ->
+                        TaskItem(
+                            title = task.title,
+                            category = task.category,
+                            checked = checked,
+                            onCheckedChange = onCheck
                         )
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(3.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(colorScheme.primary)
-                        )
-
-                        Spacer(Modifier.height(36.dp))
-
-                        DrawerMenuItem(
-                            label = if (isDarkTheme) "Light Mode" else "Dark Mode",
-                            icon = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            iconTint = Color(0xFFFFD700),
-                            textColor = colorScheme.onSurface,
-                            onClick = {
-                                onToggleDarkMode()
-                                menuOpen = false
-                            }
-                        )
-
-                        Spacer(Modifier.height(16.dp))
-                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
-                        Spacer(Modifier.height(16.dp))
-
-                        DrawerMenuItem(
-                            label = "Log Out",
-                            icon = Icons.Default.Logout,
-                            iconTint = colorScheme.error,
-                            textColor = colorScheme.error,
-                            onClick = {
-                                menuOpen = false
-                                onLogout()
-                            }
-                        )
-
-                        Spacer(Modifier.weight(1f))
-
-                        Text(
-                            "v1.0.0",
-                            fontSize = 11.sp,
-                            color = colorScheme.onSurface.copy(alpha = 0.3f)
+                    }
+                    if (index < tasks.lastIndex) {
+                        HorizontalDivider(
+                            color = colorScheme.outline.copy(alpha = 0.3f),
+                            thickness = 1.dp
                         )
                     }
                 }
             }
+            Spacer(Modifier.height(60.dp))
         }
     }
 }
 
-@Composable
-fun DrawerMenuItem(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconTint: Color,
-    textColor: Color,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(iconTint.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = iconTint, modifier = Modifier.size(20.dp))
-        }
-        Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = textColor)
-    }
-}
+// ── HomeHeader ───────────────────────────────────────────────────────────────
 
 @Composable
 fun HomeHeader(
@@ -347,7 +278,6 @@ fun HomeHeader(
                         letterSpacing = 0.3.sp
                     )
                 }
-
                 Spacer(Modifier.width(12.dp))
                 HamburgerButton(onClick = onMenuClick)
             }
@@ -364,6 +294,8 @@ fun HomeHeader(
     }
 }
 
+// ── HamburgerButton ──────────────────────────────────────────────────────────
+
 @Composable
 fun HamburgerButton(onClick: () -> Unit) {
     val color = MaterialTheme.colorScheme.onBackground
@@ -379,21 +311,19 @@ fun HamburgerButton(onClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(5.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Box(Modifier.width(22.dp).height(2.5.dp).clip(RoundedCornerShape(50)).background(color))
             Box(
-                modifier = Modifier.width(22.dp).height(2.5.dp).clip(RoundedCornerShape(50)).background(color)
-            )
-            Box(
-                modifier = Modifier
+                Modifier
                     .width(16.dp).height(2.5.dp).clip(RoundedCornerShape(50))
                     .align(Alignment.Start).offset(x = 3.dp)
                     .background(MaterialTheme.colorScheme.primary)
             )
-            Box(
-                modifier = Modifier.width(22.dp).height(2.5.dp).clip(RoundedCornerShape(50)).background(color)
-            )
+            Box(Modifier.width(22.dp).height(2.5.dp).clip(RoundedCornerShape(50)).background(color))
         }
     }
 }
+
+// ── QuickAccessRow ───────────────────────────────────────────────────────────
 
 @Composable
 fun QuickAccessRow(
@@ -427,7 +357,7 @@ fun QuickAccessRow(
 fun QuickAccessCard(
     title: String,
     subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     backgroundColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
@@ -447,50 +377,6 @@ fun QuickAccessCard(
                 Text(title, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
                 Text(subtitle, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
             }
-        }
-    }
-}
-
-@Composable
-fun TaskListCard(
-    tasks: List<Task>,
-    onCheckedChange: (Task) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colorScheme = MaterialTheme.colorScheme
-
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column {
-            if (tasks.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "No pending tasks. Tap + to add one!",
-                        color = colorScheme.onSurfaceVariant,
-                        fontSize = 14.sp
-                    )
-                }
-            } else {
-                tasks.forEachIndexed { index, task ->
-                    TaskItem(
-                        title = task.title,
-                        category = task.category,
-                        checked = task.isChecked,
-                        onCheckedChange = { onCheckedChange(task) }
-                    )
-                    if (index < tasks.lastIndex) {
-                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f), thickness = 1.dp)
-                    }
-                }
-            }
-            Spacer(Modifier.height(60.dp))
         }
     }
 }

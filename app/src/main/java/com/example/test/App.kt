@@ -80,13 +80,18 @@ fun MyApp(
                     HomeScreen(
                         taskViewModel = taskViewModel,
                         userId = currentUser?.id,
-                        firstName = currentUser?.firstName ?: "",   // ← real name
+                        firstName = currentUser?.firstName ?: "",
                         isDarkTheme = isDarkTheme,
+                        isLoggedIn = currentUser != null,          // ← NEW
                         onToggleDarkMode = { isDarkTheme = !isDarkTheme },
-                        onLogout = {
-                            authViewModel.logout()
-                            navController.navigate("login") {
-                                popUpTo("home") { inclusive = true }
+                        onAuthAction = {                           // ← NEW: replaces onLogout
+                            if (currentUser != null) {
+                                authViewModel.logout()
+                                navController.navigate("login") {
+                                    popUpTo("home") { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate("login")
                             }
                         },
                         onAddClick = {
@@ -95,7 +100,7 @@ fun MyApp(
                         },
                         onCalendarClick = { navController.navigate("calendar") },
                         onNotesClick    = { navController.navigate("notes") },
-                        onTasksClick = { navController.navigate("today_tasks") }
+                        onTasksClick    = { navController.navigate("today_tasks") }
                     )
                 }
 
