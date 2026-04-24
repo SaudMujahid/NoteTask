@@ -29,12 +29,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ---------------------------------------------------------------------------
-// Simple one-shot completion sound using SoundPool (no asset file required).
-// We generate a short 880 Hz tick via AudioTrack-style PCM through SoundPool.
-// Because SoundPool can't generate audio on the fly we instead play a system
-// sound that ships with every Android device.
-// ---------------------------------------------------------------------------
+// Audio
 private fun playCheckSound(context: android.content.Context) {
     try {
         val attrs = AudioAttributes.Builder()
@@ -177,12 +172,11 @@ fun TodayTasksScreen(
                 }
 
                 item {
-                    // ── Neutral card — no red background, no red border ──
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = colorScheme.surface   // plain surface, not red
+                            containerColor = colorScheme.surface
                         ),
                         elevation = CardDefaults.cardElevation(1.dp)
                     ) {
@@ -285,7 +279,6 @@ private fun OverdueTaskRow(
             }
         }
 
-        // Date badge — red tint kept here as the visual overdue signal
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
