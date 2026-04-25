@@ -51,7 +51,8 @@ private enum class TaskFilter {
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel,
-    onNavigateHome: () -> Unit = {}
+    onNavigateHome: () -> Unit = {},
+    onAddTaskClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val viewMode by viewModel.viewMode.collectAsState()
@@ -175,6 +176,21 @@ fun CalendarScreen(
                     viewModel = viewModel
                 )
             },
+            floatingActionButton = {
+                if (viewMode != CalendarViewMode.YEAR) {
+                    FloatingActionButton(
+                        onClick = onAddTaskClick,
+                        containerColor = BorderBlue, 
+                        contentColor = Color.White
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Task"
+                        )
+                    }
+                }
+            },
+            floatingActionButtonPosition = FabPosition.End,
             containerColor = colorScheme.background
         ) { padding ->
             Box(

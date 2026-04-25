@@ -124,7 +124,11 @@ fun MyApp(
                 composable("calendar") {
                     CalendarScreen(
                         viewModel = calendarViewModel,
-                        onNavigateHome = { navController.popBackStack("home", false) }
+                        onNavigateHome = { navController.popBackStack("home", false) },
+                        onAddTaskClick = {
+                            if (currentUser != null) navController.navigate("add_task")
+                            else navController.navigate("login")
+                        }
                     )
                 }
 
