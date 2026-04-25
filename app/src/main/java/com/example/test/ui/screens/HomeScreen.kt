@@ -25,9 +25,15 @@ import com.example.test.data.models.Task
 import com.example.test.ui.components.DrawerMenu
 import com.example.test.ui.components.SwipeOffTaskItem
 import com.example.test.ui.components.TaskItem
+import com.example.test.ui.theme.*
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+
+private enum class HomeTaskFilter {
+    PENDING,
+    COMPLETED
+}
 
 @Composable
 fun HomeScreen(
@@ -45,8 +51,17 @@ fun HomeScreen(
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
+    val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
 
-    val pendingTasks = remember(tasks) { tasks.filter { !it.isChecked } }
+    val todayTasks = remember(tasks, today) { tasks.filter { it.date == today } }
+    val pendingTasks = remember(todayTasks) { todayTasks.filter { !it.isChecked } }
+    val completedTasks = remember(todayTasks) { todayTasks.filter { it.isChecked } }
+    var homeTaskFilter by remember { mutableStateOf(HomeTaskFilter.PENDING) }
+    val filteredTasks = when (homeTaskFilter) {
+        HomeTaskFilter.PENDING -> pendingTasks
+        HomeTaskFilter.COMPLETED -> completedTasks
+    }
+
     var menuOpen by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
@@ -114,9 +129,39 @@ fun HomeScreen(
             item { Spacer(Modifier.height(12.dp)) }
 
             item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatusBadge(
+                        text = "pending",
+                        backgroundColor = PendingBadgeBg,
+                        borderColor = PendingBadgeBorder,
+                        contentColor = PendingBadgeBorder,
+                        count = pendingTasks.size,
+                        selected = homeTaskFilter == HomeTaskFilter.PENDING,
+                        onClick = { homeTaskFilter = HomeTaskFilter.PENDING }
+                    )
+                    StatusBadge(
+                        text = "completed",
+                        backgroundColor = CompletedBadgeBg,
+                        borderColor = CompletedBadgeBorder,
+                        contentColor = CompletedBadgeBorder,
+                        count = completedTasks.size,
+                        selected = homeTaskFilter == HomeTaskFilter.COMPLETED,
+                        onClick = { homeTaskFilter = HomeTaskFilter.COMPLETED }
+                    )
+                }
+            }
+
+            item { Spacer(Modifier.height(10.dp)) }
+
+            item {
                 // TaskListCard now uses SwipeOffTaskItem internally
                 TaskListCard(
-                    tasks = pendingTasks,
+                    tasks = filteredTasks,
+                    emptyMessage = if (homeTaskFilter == HomeTaskFilter.PENDING) {
+                        "No pending tasks for today."
+                    } else {
+                        "No completed tasks for today."
+                    },
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) }
                 )
             }
@@ -174,6 +219,7 @@ fun HomeScreen(
 fun TaskListCard(
     tasks: List<Task>,
     onCheckedChange: (Task) -> Unit,
+    emptyMessage: String,
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -193,7 +239,7 @@ fun TaskListCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "No pending tasks. Tap + to add one!",
+                        emptyMessage,
                         color = colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )

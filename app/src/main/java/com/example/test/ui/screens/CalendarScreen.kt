@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -32,12 +33,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.test.data.models.Task
 import com.example.test.ui.theme.*
+import com.example.test.ui.utils.playCheckSound
 import com.example.test.ui.viewmodels.CalendarDay
 import com.example.test.ui.viewmodels.CalendarViewModel
 import com.example.test.ui.viewmodels.CalendarViewMode
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+
+private enum class TaskFilter {
+    ALL,
+    PENDING,
+    COMPLETED
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -458,12 +466,20 @@ fun MonthView(viewModel: CalendarViewModel) {
                     .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(tasksForSelectedDate, key = { it.id }) { task ->
+                items(tasksForSelectedDate.size, key = { tasksForSelectedDate[it].id }) { index ->
+                    val task = tasksForSelectedDate[index]
                     TaskItemRow(
                         task = task,
                         onToggle = { viewModel.toggleTask(task) },
                         onDelete = { viewModel.deleteTask(task) }
                     )
+                    if (index < tasksForSelectedDate.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            thickness = 1.dp,
+                            color = BorderBlue.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         }
@@ -705,6 +721,13 @@ fun CollapsibleTaskCard(
         targetValue = if (isExpanded) 180f else 0f,
         label = "rotation"
     )
+    var selectedFilter by remember(tasks) { mutableStateOf(TaskFilter.ALL) }
+
+    val filteredTasks = when (selectedFilter) {
+        TaskFilter.ALL -> tasks
+        TaskFilter.PENDING -> tasks.filter { !it.isChecked }
+        TaskFilter.COMPLETED -> tasks.filter { it.isChecked }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -750,14 +773,30 @@ fun CollapsibleTaskCard(
                                 backgroundColor = PendingBadgeBg,
                                 borderColor = PendingBadgeBorder,
                                 contentColor = PendingBadgeBorder,
-                                count = pendingTasks
+                                count = pendingTasks,
+                                selected = selectedFilter == TaskFilter.PENDING,
+                                onClick = {
+                                    selectedFilter = if (selectedFilter == TaskFilter.PENDING) {
+                                        TaskFilter.ALL
+                                    } else {
+                                        TaskFilter.PENDING
+                                    }
+                                }
                             )
                             StatusBadge(
                                 text = "completed",
                                 backgroundColor = CompletedBadgeBg,
                                 borderColor = CompletedBadgeBorder,
                                 contentColor = CompletedBadgeBorder,
-                                count = completedTasks
+                                count = completedTasks,
+                                selected = selectedFilter == TaskFilter.COMPLETED,
+                                onClick = {
+                                    selectedFilter = if (selectedFilter == TaskFilter.COMPLETED) {
+                                        TaskFilter.ALL
+                                    } else {
+                                        TaskFilter.COMPLETED
+                                    }
+                                }
                             )
                         }
                     }
@@ -777,7 +816,7 @@ fun CollapsibleTaskCard(
                 exit = shrinkVertically() + fadeOut()
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp)) {
-                    if (tasks.isEmpty()) {
+                    if (filteredTasks.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -785,20 +824,28 @@ fun CollapsibleTaskCard(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No tasks for this day",
+                                text = when (selectedFilter) {
+                                    TaskFilter.PENDING -> "No pending tasks for this day"
+                                    TaskFilter.COMPLETED -> "No completed tasks for this day"
+                                    TaskFilter.ALL -> "No tasks for this day"
+                                },
                                 color = colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     } else {
-                        tasks.forEach { task ->
+                        filteredTasks.forEachIndexed { index, task ->
                             TaskItemRow(
                                 task = task,
                                 onToggle = { onTaskToggle(task) },
                                 onDelete = { onTaskDelete(task) }
                             )
-                            if (task != tasks.last()) {
-                                Spacer(modifier = Modifier.height(8.dp))
+                            if (index < filteredTasks.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    thickness = 1.dp,
+                                    color = BorderBlue.copy(alpha = 0.7f)
+                                )
                             }
                         }
                     }
@@ -814,19 +861,28 @@ fun StatusBadge(
     backgroundColor: Color,
     borderColor: Color,
     contentColor: Color,
-    count: Int
+    count: Int,
+    selected: Boolean = true,
+    onClick: (() -> Unit)? = null
 ) {
+    val badgeModifier = if (onClick != null) {
+        Modifier.clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+
     Surface(
+        modifier = badgeModifier,
         color = backgroundColor,
         shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(1.dp, borderColor)
+        border = BorderStroke(if (selected) 1.5.dp else 1.dp, borderColor.copy(alpha = if (selected) 1f else 0.55f))
     ) {
         Text(
             text = "$count $text",
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = contentColor
+            color = contentColor.copy(alpha = if (selected) 1f else 0.7f)
         )
     }
 }
@@ -935,6 +991,7 @@ fun TaskItemRow(
     onDelete: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
     val (chipBg, chipText) = when (task.category.uppercase()) {
         "HEALTH" -> ChipHealthBg to ChipHealthText
         "WORK" -> ChipWorkBg to ChipWorkText
@@ -951,7 +1008,12 @@ fun TaskItemRow(
     ) {
         Checkbox(
             checked = task.isChecked,
-            onCheckedChange = { onToggle() },
+            onCheckedChange = { isChecked ->
+                if (isChecked && !task.isChecked) {
+                    playCheckSound(context)
+                }
+                onToggle()
+            },
             colors = CheckboxDefaults.colors(checkedColor = colorScheme.primary)
         )
 
