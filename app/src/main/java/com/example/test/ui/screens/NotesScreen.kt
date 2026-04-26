@@ -20,7 +20,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 val NoteColorMap = mapOf(
-    "DEFAULT" to Color(0xFFFFFFFF),
+    "DEFAULT" to Color.Transparent,
     "RED"     to Color(0xFFFFCDD2),
     "ORANGE"  to Color(0xFFFFE0B2),
     "YELLOW"  to Color(0xFFFFF9C4),
@@ -65,7 +65,12 @@ fun NotesScreen(
                             )
                         )
                     } else {
-                        Text("Notes", fontWeight = FontWeight.Black, fontSize = 28.sp)
+                        Text(
+                            "Notes",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 28.sp,
+                            color = colorScheme.onBackground
+                        )
                     }
                 },
                 actions = {
@@ -73,14 +78,21 @@ fun NotesScreen(
                         showSearch = !showSearch
                         if (!showSearch) noteViewModel.setSearchQuery("")
                     }) {
-                        Icon(if (showSearch) Icons.Default.Close else Icons.Default.Search, null)
+                        Icon(
+                            if (showSearch) Icons.Default.Close else Icons.Default.Search,
+                            null,
+                            tint = colorScheme.onBackground
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colorScheme.background)
             )
         },
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 AnimatedVisibility(visible = showFabMenu) {
                     Column(
                         horizontalAlignment = Alignment.End,
@@ -97,7 +109,8 @@ fun NotesScreen(
                 ) {
                     Icon(
                         if (showFabMenu) Icons.Default.Close else Icons.Default.Add,
-                        null, tint = colorScheme.onPrimary
+                        null,
+                        tint = colorScheme.onPrimary
                     )
                 }
             }
@@ -124,12 +137,17 @@ fun NotesScreen(
 
             if (notes.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No notes yet. Tap + to create one.", color = colorScheme.onSurfaceVariant)
+                    Text(
+                        "No notes yet. Tap + to create one.",
+                        color = colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
                 LazyVerticalStaggeredGrid(
                     columns = StaggeredGridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalItemSpacing = 8.dp,
                     contentPadding = PaddingValues(bottom = 80.dp, top = 8.dp)
@@ -149,20 +167,39 @@ fun NotesScreen(
 
 @Composable
 private fun FabOption(label: String, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 4.dp) {
-            Text(label, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontWeight = FontWeight.Medium)
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = colorScheme.surface,
+            shadowElevation = 4.dp
+        ) {
+            Text(
+                label,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                fontWeight = FontWeight.Medium,
+                color = colorScheme.onSurface
+            )
         }
         Spacer(Modifier.width(8.dp))
-        SmallFloatingActionButton(onClick = onClick, containerColor = MaterialTheme.colorScheme.secondaryContainer) {
-            Icon(Icons.Default.Edit, null)
+        SmallFloatingActionButton(
+            onClick = onClick,
+            containerColor = colorScheme.secondaryContainer
+        ) {
+            Icon(Icons.Default.Edit, null, tint = colorScheme.onSecondaryContainer)
         }
     }
 }
 
 @Composable
 private fun NoteCard(note: Note, onClick: () -> Unit, onPin: () -> Unit) {
-    val bgColor = NoteColorMap[note.color] ?: Color.White
+    val colorScheme = MaterialTheme.colorScheme
+    val isColored = note.color != "DEFAULT"
+    val bgColor = if (isColored) NoteColorMap[note.color] ?: colorScheme.surface
+    else colorScheme.surface
+    val textColor = if (isColored) Color(0xFF1A1A1A) else colorScheme.onSurface
+    val subTextColor = if (isColored) Color(0xFF444444) else colorScheme.onSurfaceVariant
+
     val dateStr = remember(note.dateModified) {
         SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(note.dateModified))
     }
@@ -176,24 +213,48 @@ private fun NoteCard(note: Note, onClick: () -> Unit, onPin: () -> Unit) {
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(typeEmoji, fontSize = 14.sp)
-                if (note.isPinned) Icon(Icons.Default.PushPin, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
+                if (note.isPinned) Icon(
+                    Icons.Default.PushPin,
+                    null,
+                    modifier = Modifier.size(14.dp),
+                    tint = colorScheme.primary
+                )
             }
             if (note.title.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
-                Text(note.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, color = Color(0xFF1A1A1A))
+                Text(
+                    note.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = textColor
+                )
             }
             if (note.content.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
-                Text(note.content, fontSize = 13.sp, maxLines = 6, overflow = TextOverflow.Ellipsis, color = Color(0xFF444444))
+                Text(
+                    note.content,
+                    fontSize = 13.sp,
+                    maxLines = 6,
+                    overflow = TextOverflow.Ellipsis,
+                    color = subTextColor
+                )
             }
             if (note.stickers.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
-                Text(note.stickers.split(",").take(5).joinToString(" "), fontSize = 16.sp)
+                Text(
+                    note.stickers.split(",").take(5).joinToString(" "),
+                    fontSize = 16.sp
+                )
             }
             Spacer(Modifier.height(8.dp))
-            Text(dateStr, fontSize = 11.sp, color = Color.Gray)
+            Text(dateStr, fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
         }
     }
 }

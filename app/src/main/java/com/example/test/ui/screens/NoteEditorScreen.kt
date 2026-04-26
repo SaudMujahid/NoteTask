@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -45,6 +46,7 @@ fun NoteEditorScreen(
     noteViewModel: NoteViewModel,
     onBack: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val notes by noteViewModel.notes.collectAsState()
     val existingNote = remember(noteId, notes) { notes.find { it.id == noteId } }
     val type = existingNote?.type ?: noteType
@@ -54,7 +56,10 @@ fun NoteEditorScreen(
     var color by remember { mutableStateOf(existingNote?.color ?: "DEFAULT") }
     var isPinned by remember { mutableStateOf(existingNote?.isPinned ?: false) }
     var listItems by remember {
-        mutableStateOf(if (existingNote != null) noteViewModel.parseListItems(existingNote.listItemsJson) else emptyList())
+        mutableStateOf(
+            if (existingNote != null) noteViewModel.parseListItems(existingNote.listItemsJson)
+            else emptyList()
+        )
     }
     var photoUris by remember {
         mutableStateOf(existingNote?.photoUris?.split(",")?.filter { it.isNotEmpty() } ?: emptyList())
@@ -65,24 +70,34 @@ fun NoteEditorScreen(
     var showColorPicker by remember { mutableStateOf(false) }
     var showStickerPicker by remember { mutableStateOf(false) }
     var newItemText by remember { mutableStateOf("") }
+    var isSaved by remember { mutableStateOf(false) }
 
-    val bgColor = NoteColorMap[color] ?: Color.White
+    val isColored = color != "DEFAULT"
+    val bgColor = if (isColored) NoteColorMap[color] ?: colorScheme.background
+    else colorScheme.background
+    val onBgColor = if (isColored) Color(0xFF1A1A1A) else colorScheme.onBackground
+    val onBgVariant = if (isColored) Color(0xFF555555) else colorScheme.onSurfaceVariant
 
-    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        photoUris = photoUris + uris.map { it.toString() }
-    }
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris -> photoUris = photoUris + uris.map { it.toString() } }
 
     fun save() {
         val note = Note(
             id = if (noteId != -1L) noteId else 0L,
             userId = userId,
-            title = title, content = content, type = type, color = color,
+            title = title,
+            content = content,
+            type = type,
+            color = color,
             listItemsJson = noteViewModel.serializeListItems(listItems),
             photoUris = photoUris.joinToString(","),
             stickers = stickers.joinToString(","),
             isPinned = isPinned
         )
-        if (noteId == -1L) noteViewModel.addNote(note) else noteViewModel.updateNote(note)
+        if (noteId == -1L) noteViewModel.addNote(note)
+        else noteViewModel.updateNote(note)
+        isSaved = true
     }
 
     BackHandler { save(); onBack() }
@@ -92,28 +107,49 @@ fun NoteEditorScreen(
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = { save(); onBack() }) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, "Back", tint = onBgColor)
                     }
                 },
-                title = {},
+                title = {
+                    Text(
+                        when (type) { "JOURNAL" -> "📔 Journal"; "LIST" -> "✅ List"; else -> "📝 Note" },
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = colorScheme.primary
+                    )
+                },
                 actions = {
-                    IconButton(onClick = { isPinned = !isPinned }) {
-                        Icon(Icons.Default.PushPin, null, tint = if (isPinned) MaterialTheme.colorScheme.primary else Color.Gray)
+                    IconButton(onClick = { save() }) {
+                        Icon(
+                            Icons.Default.Save,
+                            contentDescription = "Save",
+                            tint = if (isSaved) colorScheme.primary else onBgColor
+                        )
+                    }
+                    IconButton(onClick = { isPinned = !isPinned; isSaved = false }) {
+                        Icon(
+                            Icons.Default.PushPin,
+                            null,
+                            tint = if (isPinned) colorScheme.primary else onBgVariant
+                        )
                     }
                     IconButton(onClick = { showColorPicker = !showColorPicker }) {
-                        Icon(Icons.Default.Palette, null)
+                        Icon(Icons.Default.Palette, null, tint = onBgColor)
                     }
                     if (type == "JOURNAL") {
                         IconButton(onClick = { photoPicker.launch("image/*") }) {
-                            Icon(Icons.Default.Image, null)
+                            Icon(Icons.Default.Image, null, tint = onBgColor)
                         }
                         IconButton(onClick = { showStickerPicker = !showStickerPicker }) {
-                            Icon(Icons.Default.Mood, null)
+                            Icon(Icons.Default.Mood, null, tint = onBgColor)
                         }
                     }
                     if (noteId != -1L) {
-                        IconButton(onClick = { existingNote?.let { noteViewModel.deleteNote(it) }; onBack() }) {
-                            Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                        IconButton(onClick = {
+                            existingNote?.let { noteViewModel.deleteNote(it) }
+                            onBack()
+                        }) {
+                            Icon(Icons.Default.Delete, null, tint = colorScheme.error)
                         }
                     }
                 },
@@ -129,161 +165,324 @@ fun NoteEditorScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
-                Text(
-                    when (type) { "JOURNAL" -> "📔 Journal"; "LIST" -> "✅ List"; else -> "📝 Note" },
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-
+            // Color picker
             if (showColorPicker) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     NoteColorMap.forEach { (key, clr) ->
+                        val displayColor = if (key == "DEFAULT") colorScheme.surface else clr
                         Box(
                             modifier = Modifier
-                                .size(36.dp).clip(CircleShape).background(clr)
-                                .border(if (color == key) 3.dp else 1.dp,
-                                    if (color == key) MaterialTheme.colorScheme.primary else Color.Gray, CircleShape)
-                                .clickable { color = key }
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(displayColor)
+                                .border(
+                                    if (color == key) 3.dp else 1.dp,
+                                    if (color == key) colorScheme.primary else colorScheme.outline,
+                                    CircleShape
+                                )
+                                .clickable { color = key; isSaved = false }
                         )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
             }
 
+            // Sticker picker (Journal only)
             if (showStickerPicker && type == "JOURNAL") {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    items(Stickers.size) { i ->
-                        Text(Stickers[i], fontSize = 28.sp, modifier = Modifier.clickable {
-                            stickers = stickers + Stickers[i]; showStickerPicker = false
-                        }.padding(4.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            "Tap a sticker to add",
+                            fontSize = 12.sp,
+                            color = colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(Stickers) { sticker ->
+                                Text(
+                                    sticker,
+                                    fontSize = 28.sp,
+                                    modifier = Modifier
+                                        .clickable {
+                                            stickers = stickers + sticker
+                                            showStickerPicker = false
+                                            isSaved = false
+                                        }
+                                        .padding(4.dp)
+                                )
+                            }
+                        }
                     }
                 }
                 Spacer(Modifier.height(12.dp))
             }
 
+            // Active stickers (Journal only)
             if (stickers.isNotEmpty() && type == "JOURNAL") {
-                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     stickers.forEachIndexed { i, s ->
-                        Text(s, fontSize = 28.sp, modifier = Modifier.clickable {
-                            stickers = stickers.toMutableList().also { it.removeAt(i) }
-                        })
+                        Text(
+                            s,
+                            fontSize = 28.sp,
+                            modifier = Modifier.clickable {
+                                stickers = stickers.toMutableList().also { it.removeAt(i) }
+                                isSaved = false
+                            }
+                        )
                     }
                 }
+                Spacer(Modifier.height(4.dp))
+                Text("(tap sticker to remove)", fontSize = 11.sp, color = onBgVariant)
                 Spacer(Modifier.height(8.dp))
             }
 
+            // Title
             BasicTextField(
-                value = title, onValueChange = { title = it },
-                textStyle = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A)),
+                value = title,
+                onValueChange = { title = it; isSaved = false },
+                textStyle = TextStyle(
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = onBgColor
+                ),
                 modifier = Modifier.fillMaxWidth(),
                 decorationBox = { inner ->
-                    if (title.isEmpty()) Text("Title", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.LightGray)
+                    if (title.isEmpty()) {
+                        Text(
+                            "Title",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = onBgVariant
+                        )
+                    }
                     inner()
                 }
             )
 
             Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
+            HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
             Spacer(Modifier.height(16.dp))
 
             when (type) {
                 "LIST" -> {
                     listItems.forEachIndexed { index, item ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Checkbox(
                                 checked = item.isChecked,
-                                onCheckedChange = {
-                                    listItems = listItems.toMutableList().also { l -> l[index] = item.copy(isChecked = it) }
-                                }
+                                onCheckedChange = { checked ->
+                                    val updated = listItems.toMutableList()
+                                    updated[index] = item.copy(isChecked = checked)
+                                    listItems = updated
+                                    isSaved = false
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = colorScheme.primary,
+                                    uncheckedColor = onBgVariant
+                                )
                             )
                             Spacer(Modifier.width(8.dp))
                             BasicTextField(
                                 value = item.text,
                                 onValueChange = { newText ->
-                                    listItems = listItems.toMutableList().also { l -> l[index] = item.copy(text = newText) }
+                                    val updated = listItems.toMutableList()
+                                    updated[index] = item.copy(text = newText)
+                                    listItems = updated
+                                    isSaved = false
                                 },
                                 textStyle = TextStyle(
                                     fontSize = 16.sp,
-                                    color = if (item.isChecked) Color.Gray else Color(0xFF1A1A1A),
-                                    textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
+                                    color = if (item.isChecked) onBgVariant else onBgColor,
+                                    textDecoration = if (item.isChecked) TextDecoration.LineThrough
+                                    else TextDecoration.None
                                 ),
                                 modifier = Modifier.weight(1f),
                                 decorationBox = { inner ->
-                                    if (item.text.isEmpty()) Text("Item", color = Color.LightGray, fontSize = 16.sp)
+                                    if (item.text.isEmpty()) {
+                                        Text("Item", color = onBgVariant, fontSize = 16.sp)
+                                    }
                                     inner()
                                 }
                             )
-                            IconButton(onClick = { listItems = listItems.toMutableList().also { it.removeAt(index) } }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                            IconButton(
+                                onClick = {
+                                    listItems = listItems.toMutableList().also { it.removeAt(index) }
+                                    isSaved = false
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = onBgVariant
+                                )
                             }
                         }
+                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.1f))
                     }
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Add new item
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            null,
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
                         BasicTextField(
-                            value = newItemText, onValueChange = { newItemText = it },
+                            value = newItemText,
+                            onValueChange = { newItemText = it },
                             modifier = Modifier.weight(1f),
-                            textStyle = TextStyle(fontSize = 16.sp, color = Color(0xFF1A1A1A)),
+                            textStyle = TextStyle(fontSize = 16.sp, color = onBgColor),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = {
                                 if (newItemText.isNotBlank()) {
                                     listItems = listItems + ListItem(text = newItemText)
                                     newItemText = ""
+                                    isSaved = false
                                 }
                             }),
                             decorationBox = { inner ->
-                                if (newItemText.isEmpty()) Text("Add item...", color = Color.LightGray, fontSize = 16.sp)
+                                if (newItemText.isEmpty()) {
+                                    Text(
+                                        "Add item and press Done...",
+                                        color = onBgVariant,
+                                        fontSize = 16.sp
+                                    )
+                                }
                                 inner()
                             }
                         )
+                        if (newItemText.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    listItems = listItems + ListItem(text = newItemText)
+                                    newItemText = ""
+                                    isSaved = false
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(Icons.Default.Check, null, tint = colorScheme.primary)
+                            }
+                        }
+                    }
+
+                    if (listItems.isNotEmpty()) {
+                        Spacer(Modifier.height(16.dp))
+                        val checkedCount = listItems.count { it.isChecked }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                "$checkedCount / ${listItems.size} completed",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                fontSize = 13.sp,
+                                color = colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
+
                 else -> {
                     BasicTextField(
-                        value = content, onValueChange = { content = it },
-                        textStyle = TextStyle(fontSize = 16.sp, color = Color(0xFF333333), lineHeight = 24.sp),
-                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 200.dp),
+                        value = content,
+                        onValueChange = { content = it; isSaved = false },
+                        textStyle = TextStyle(
+                            fontSize = 16.sp,
+                            color = onBgColor,
+                            lineHeight = 26.sp
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 200.dp),
                         decorationBox = { inner ->
-                            if (content.isEmpty()) Text(
-                                if (type == "JOURNAL") "What's on your mind today?" else "Start writing...",
-                                color = Color.LightGray, fontSize = 16.sp
-                            )
+                            if (content.isEmpty()) {
+                                Text(
+                                    if (type == "JOURNAL") "What's on your mind today..."
+                                    else "Start writing...",
+                                    color = onBgVariant,
+                                    fontSize = 16.sp
+                                )
+                            }
                             inner()
                         }
                     )
                 }
             }
 
+            // Photos (Journal only)
             if (photoUris.isNotEmpty() && type == "JOURNAL") {
                 Spacer(Modifier.height(16.dp))
-                Text("Photos", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Gray)
+                Text(
+                    "Photos",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = onBgVariant
+                )
                 Spacer(Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(photoUris.size) { i ->
+                    items(photoUris) { uri ->
                         Box {
                             AsyncImage(
-                                model = Uri.parse(photoUris[i]),
+                                model = Uri.parse(uri),
                                 contentDescription = null,
-                                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(12.dp)),
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
                                 contentScale = ContentScale.Crop
                             )
                             IconButton(
-                                onClick = { photoUris = photoUris.toMutableList().also { it.removeAt(i) } },
-                                modifier = Modifier.align(Alignment.TopEnd).size(28.dp)
+                                onClick = {
+                                    photoUris = photoUris.toMutableList().also { it.remove(uri) }
+                                    isSaved = false
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(28.dp)
                             ) {
-                                Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                Icon(
+                                    Icons.Default.Close,
+                                    null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                         }
                     }
                 }
             }
+
+            Spacer(Modifier.height(80.dp))
         }
     }
 }
