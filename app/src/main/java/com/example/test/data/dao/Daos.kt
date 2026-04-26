@@ -45,18 +45,22 @@ interface TaskDao {
 
 @Dao
 interface NoteDao {
-    @Insert
-    suspend fun insert(note: Note)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(note: Note): Long
 
     @Update
     suspend fun update(note: Note)
 
-    @Upsert
-    suspend fun upsertNote(note: Note)
-
     @Delete
     suspend fun delete(note: Note)
 
-    @Query("SELECT * FROM notes WHERE userId = :userId ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE userId = :userId ORDER BY isPinned DESC, dateModified DESC")
     fun getNotesForUser(userId: Long): Flow<List<Note>>
+
+    @Query("""
+        SELECT * FROM notes WHERE userId = :userId 
+        AND (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%')
+        ORDER BY isPinned DESC, dateModified DESC
+    """)
+    fun searchNotes(userId: Long, query: String): Flow<List<Note>>
 }

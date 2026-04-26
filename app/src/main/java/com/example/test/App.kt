@@ -9,7 +9,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.test.data.repository.NoteRepository
 import com.example.test.data.repository.TaskRepository
 import com.example.test.data.repository.UserRepository
 import com.example.test.ui.screens.*
@@ -20,14 +19,13 @@ import com.example.test.ui.viewmodels.*
 fun MyApp(
     userRepository: UserRepository,
     taskRepository: TaskRepository,
-    noteRepository: NoteRepository
 ) {
     var isDarkTheme by remember { mutableStateOf(false) }
 
-    val navController  = rememberNavController()
+    val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel(factory = ViewModelFactory(userRepository))
     val taskViewModel: TaskViewModel = viewModel(factory = ViewModelFactory(taskRepository))
-    val noteViewModel: NoteViewModel = viewModel(factory = ViewModelFactory(noteRepository))
+    val noteViewModel: NoteViewModel = viewModel()
     val calendarViewModel: CalendarViewModel = viewModel(factory = ViewModelFactory(taskRepository))
 
     val currentUser by authViewModel.currentUser.collectAsState()
@@ -35,7 +33,7 @@ fun MyApp(
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
             taskViewModel.setUser(user.id)
-            noteViewModel.setUser(user.id)
+            noteViewModel.setUserId(user.id)
             calendarViewModel.setUser(user.id)
         }
     }
@@ -47,7 +45,6 @@ fun MyApp(
                 startDestination = "home",
                 modifier = Modifier.padding(innerPadding)
             ) {
-
                 composable("signup") {
                     SignUpScreen(
                         isDarkTheme = isDarkTheme,
@@ -80,7 +77,7 @@ fun MyApp(
                     HomeScreen(
                         taskViewModel = taskViewModel,
                         userId = currentUser?.id,
-                        firstName = currentUser?.firstName ?: "",   // ← real name
+                        firstName = currentUser?.firstName ?: "",
                         isDarkTheme = isDarkTheme,
                         onToggleDarkMode = { isDarkTheme = !isDarkTheme },
                         onLogout = {
@@ -94,7 +91,7 @@ fun MyApp(
                             else navController.navigate("login")
                         },
                         onCalendarClick = { navController.navigate("calendar") },
-                        onNotesClick    = { navController.navigate("notes") },
+                        onNotesClick = { navController.navigate("notes") },
                         onTasksClick = { navController.navigate("today_tasks") }
                     )
                 }
@@ -124,7 +121,30 @@ fun MyApp(
                     )
                 }
 
-                composable("notes") { NotesScreen() }
+                composable("notes") {
+                    NotesScreen(
+                        userId = currentUser?.id ?: 0L,
+                        noteViewModel = noteViewModel,
+                        onNoteClick = { noteId ->
+                            navController.navigate("note_editor/$noteId/NOTE")
+                        },
+                        onNewNote = { type ->
+                            navController.navigate("note_editor/-1/$type")
+                        }
+                    )
+                }
+
+                composable("note_editor/{noteId}/{noteType}") { backStackEntry ->
+                    val noteId = backStackEntry.arguments?.getString("noteId")?.toLongOrNull() ?: -1L
+                    val noteType = backStackEntry.arguments?.getString("noteType") ?: "NOTE"
+                    NoteEditorScreen(
+                        noteId = noteId,
+                        noteType = noteType,
+                        userId = currentUser?.id ?: 0L,
+                        noteViewModel = noteViewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

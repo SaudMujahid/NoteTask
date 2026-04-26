@@ -63,5 +63,7 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
     implementation("org.mindrot:jbcrypt:0.4")
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
 }
