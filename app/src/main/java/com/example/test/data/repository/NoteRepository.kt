@@ -14,4 +14,12 @@ class NoteRepository(private val noteDao: NoteDao) {
     suspend fun deleteNote(note: Note) {
         noteDao.delete(note)
     }
+
+    suspend fun insert(note: Note) {
+        noteDao.insert(note)
+    }
+
+    fun searchNotes(userId: Long, query: String): Flow<List<Note>> {
+        return noteDao.searchNotes(userId, query)
+    }
 }

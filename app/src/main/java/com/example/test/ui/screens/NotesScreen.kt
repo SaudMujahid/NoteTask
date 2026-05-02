@@ -46,7 +46,7 @@ fun NotesScreen(
     var showFabMenu by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
 
-    LaunchedEffect(userId) { noteViewModel.setUserId(userId) }
+    LaunchedEffect(userId) { noteViewModel.setUser(userId) }
 
     Scaffold(
         topBar = {

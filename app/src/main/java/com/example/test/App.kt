@@ -11,7 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.test.data.repository.TaskRepository
 import com.example.test.data.repository.UserRepository
-//import com.example.test.data.repository.NoteRepository
+import com.example.test.data.repository.NoteRepository
 import com.example.test.ui.screens.*
 import com.example.test.ui.theme.TestTheme
 import com.example.test.ui.viewmodels.*
@@ -27,15 +27,14 @@ fun MyApp(
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel(factory = ViewModelFactory(userRepository))
     val taskViewModel: TaskViewModel = viewModel(factory = ViewModelFactory(taskRepository))
-    val noteViewModel: NoteViewModel = viewModel()
     val calendarViewModel: CalendarViewModel = viewModel(factory = ViewModelFactory(taskRepository))
-
+    val noteViewModel: NoteViewModel = viewModel(factory = ViewModelFactory(noteRepository))
     val currentUser by authViewModel.currentUser.collectAsState()
 
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
             taskViewModel.setUser(user.id)
-            noteViewModel.setUserId(user.id)
+            noteViewModel.setUser(user.id)
             calendarViewModel.setUser(user.id)
         }
     }
@@ -82,9 +81,9 @@ fun MyApp(
                         userId = currentUser?.id,
                         firstName = currentUser?.firstName ?: "",
                         isDarkTheme = isDarkTheme,
-                        isLoggedIn = currentUser != null,          // ← NEW
+                        isLoggedIn = currentUser != null,
                         onToggleDarkMode = { isDarkTheme = !isDarkTheme },
-                        onAuthAction = {                           // ← NEW: replaces onLogout
+                        onAuthAction = {
                             if (currentUser != null) {
                                 authViewModel.logout()
                                 navController.navigate("login") {
@@ -99,13 +98,15 @@ fun MyApp(
                             else navController.navigate("login")
                         },
                         onCalendarClick = { navController.navigate("calendar") },
-<<<<<<< HEAD
                         onNotesClick    = { navController.navigate("notes") },
                         onTasksClick    = { navController.navigate("today_tasks") }
-=======
-                        onNotesClick = { navController.navigate("notes") },
-                        onTasksClick = { navController.navigate("today_tasks") }
->>>>>>> origin/maria
+                    )
+                }
+
+                composable("today_tasks") {
+                    TodayTasksScreen(
+                        taskViewModel = taskViewModel,
+                        onClose = { navController.popBackStack() }
                     )
                 }
 
