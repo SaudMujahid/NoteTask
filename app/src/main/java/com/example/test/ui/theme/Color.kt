@@ -35,6 +35,11 @@ val PendingBadgeBorder  = Color(0xFFC99700)
 val CompletedBadgeBg    = Color(0xFFE3F2FD)
 val CompletedBadgeBorder= Color(0xFF1565C0)
 
+// Filter Badge Colors
+val FilterBadgeBg = Color(0xFFF6F7F9)
+val FilterBadgeBorder = Color(0xFFD6DBE3)
+
+// Auth Screen Colors — Green & Yellow theme
 val AuthBgGreen      = Color(0xFFf0f7eb)
 val AuthHeaderGreen  = Color(0xFF2d7a22)
 val AuthMediumGreen  = Color(0xFF4aad3a)

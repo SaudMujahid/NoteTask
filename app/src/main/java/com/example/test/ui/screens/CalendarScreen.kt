@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -197,6 +199,7 @@ fun CalendarScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .background(colorScheme.background)
             ) {
                 when (viewMode) {
                     CalendarViewMode.YEAR -> YearView(viewModel = viewModel)
@@ -235,7 +238,8 @@ fun CalendarTopBar(
             Text(
                 text = title,
                 fontWeight = FontWeight.Bold,
-                color = colorScheme.onBackground
+                color = colorScheme.onBackground,
+                letterSpacing = 0.25.sp
             )
         },
         navigationIcon = {
@@ -265,7 +269,7 @@ fun CalendarTopBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = colorScheme.background
+            containerColor = colorScheme.background.copy(alpha = 0.95f)
         )
     )
 }
@@ -350,13 +354,16 @@ fun MonthCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1.2f),
-        shape = RoundedCornerShape(16.dp),
+            .aspectRatio(1.2f)
+            .shadow(3.dp, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
         color = if (isCurrentMonth) colorScheme.primaryContainer else colorScheme.surface,
         border = if (isCurrentMonth) {
             BorderStroke(2.dp, colorScheme.primary)
-        } else null,
-        tonalElevation = 2.dp
+        } else {
+            BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.14f))
+        },
+        tonalElevation = 4.dp
     ) {
         Box(
             modifier = Modifier
@@ -437,7 +444,9 @@ fun MonthView(viewModel: CalendarViewModel) {
             columns = GridCells.Fixed(7),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(300.dp),
+                .height(300.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(colorScheme.surface.copy(alpha = 0.72f)),
             contentPadding = PaddingValues(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -548,12 +557,13 @@ fun CalendarDayCell(
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(8.dp))
+            .shadow(if (isSelected) 3.dp else 1.dp, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
             .border(
                 width = if (day.isToday && !isSelected) 2.dp else 0.dp,
                 color = if (day.isToday && !isSelected) colorScheme.primary else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp)
             )
             .clickable(onClick = onClick)
             .padding(4.dp),
@@ -669,7 +679,16 @@ fun DateStripRow(
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colorScheme.surface)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        colorScheme.surface,
+                        colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                    )
+                )
+            )
+            .border(1.dp, colorScheme.primary.copy(alpha = 0.14f), RoundedCornerShape(16.dp))
             .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
@@ -699,9 +718,15 @@ fun DateChipItem(
 
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .shadow(if (isSelected) 3.dp else 1.dp, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(
                 if (isSelected) colorScheme.primary else colorScheme.surfaceVariant
+            )
+            .border(
+                width = if (isSelected) 1.5.dp else 1.dp,
+                color = if (isSelected) colorScheme.primary.copy(alpha = 0.5f) else colorScheme.outline.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -738,18 +763,32 @@ fun CollapsibleTaskCard(
         label = "rotation"
     )
     var selectedFilter by remember(tasks) { mutableStateOf(TaskFilter.ALL) }
+    val availableCategories = remember {
+        TaskCategoryFilter.entries
+            .filter { it != TaskCategoryFilter.ALL }
+            .sortedBy { it.label }
+    }
+    var selectedCategory by remember { mutableStateOf(TaskCategoryFilter.ALL) }
 
-    val filteredTasks = when (selectedFilter) {
+    val statusFilteredTasks = when (selectedFilter) {
         TaskFilter.ALL -> tasks
         TaskFilter.PENDING -> tasks.filter { !it.isChecked }
         TaskFilter.COMPLETED -> tasks.filter { it.isChecked }
     }
 
+    val filteredTasks = if (selectedCategory == TaskCategoryFilter.ALL) {
+        statusFilteredTasks
+    } else {
+        statusFilteredTasks.filter { TaskCategoryFilter.fromTaskCategory(it.category) == selectedCategory }
+    }
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(3.dp, RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(6.dp),
+        border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.14f))
     ) {
         Column(
             modifier = Modifier
@@ -815,6 +854,15 @@ fun CollapsibleTaskCard(
                                 }
                             )
                         }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TypeFilterDropdownBadge(
+                            selectedCategory = selectedCategory,
+                            categories = availableCategories,
+                            onCategorySelected = { selectedCategory = it },
+                            badgeBackgroundColor = FilterBadgeBg,
+                            badgeBorderColor = FilterBadgeBorder,
+                            badgeContentColor = BorderBlue
+                        )
                     }
                 }
                 Icon(
@@ -841,9 +889,21 @@ fun CollapsibleTaskCard(
                         ) {
                             Text(
                                 text = when (selectedFilter) {
-                                    TaskFilter.PENDING -> "No pending tasks for this day"
-                                    TaskFilter.COMPLETED -> "No completed tasks for this day"
-                                    TaskFilter.ALL -> "No tasks for this day"
+                                    TaskFilter.PENDING -> if (selectedCategory == TaskCategoryFilter.ALL) {
+                                        "No pending tasks for this day"
+                                    } else {
+                                        "No pending ${selectedCategory.label} tasks for this day"
+                                    }
+                                    TaskFilter.COMPLETED -> if (selectedCategory == TaskCategoryFilter.ALL) {
+                                        "No completed tasks for this day"
+                                    } else {
+                                        "No completed ${selectedCategory.label} tasks for this day"
+                                    }
+                                    TaskFilter.ALL -> if (selectedCategory == TaskCategoryFilter.ALL) {
+                                        "No tasks for this day"
+                                    } else {
+                                        "No ${selectedCategory.label} tasks for this day"
+                                    }
                                 },
                                 color = colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium
@@ -904,6 +964,68 @@ fun StatusBadge(
 }
 
 @Composable
+fun TypeFilterDropdownBadge(
+    selectedCategory: TaskCategoryFilter,
+    categories: List<TaskCategoryFilter>,
+    onCategorySelected: (TaskCategoryFilter) -> Unit,
+    badgeBackgroundColor: Color = FilterBadgeBg,
+    badgeBorderColor: Color = FilterBadgeBorder,
+    badgeContentColor: Color = BorderBlue
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Surface(
+            modifier = Modifier.clickable { expanded = true },
+            color = badgeBackgroundColor,
+            shape = RoundedCornerShape(999.dp),
+            border = BorderStroke(1.dp, badgeBorderColor)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Type: ${selectedCategory.label}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = badgeContentColor
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Open type filter",
+                    tint = badgeContentColor,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text(TaskCategoryFilter.ALL.label) },
+                onClick = {
+                    onCategorySelected(TaskCategoryFilter.ALL)
+                    expanded = false
+                }
+            )
+            categories.forEach { category ->
+                DropdownMenuItem(
+                    text = { Text(category.label) },
+                    onClick = {
+                        onCategorySelected(category)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun CollapsibleScheduleCard(
     isExpanded: Boolean,
     onToggleExpand: () -> Unit
@@ -915,10 +1037,13 @@ fun CollapsibleScheduleCard(
     )
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(3.dp, RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(6.dp),
+        border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.14f))
     ) {
         Column(
             modifier = Modifier
