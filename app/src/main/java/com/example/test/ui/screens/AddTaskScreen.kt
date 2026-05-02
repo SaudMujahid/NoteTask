@@ -9,6 +9,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +28,7 @@ import java.util.*
 // Must stay in sync with CategoryChip's when-branches.
 private val Categories = listOf("Personal", "Work", "University", "Other")
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddTaskScreen(
     userId: Long,
@@ -155,8 +157,9 @@ fun AddTaskScreen(
             )
 
             // Chip selector — tapping a chip selects it
-            Row(
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Categories.forEach { cat ->
@@ -164,9 +167,7 @@ fun AddTaskScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .background(
-                                if (selected) cs.primary else cs.surfaceVariant
-                            )
+                            .background(if (selected) cs.primary else cs.surfaceVariant)
                             .border(
                                 width = if (selected) 0.dp else 1.dp,
                                 color = cs.outline.copy(alpha = 0.4f),
@@ -179,8 +180,7 @@ fun AddTaskScreen(
                             text = cat,
                             fontSize = 13.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selected) cs.onPrimary
-                            else cs.onSurfaceVariant
+                            color = if (selected) cs.onPrimary else cs.onSurfaceVariant
                         )
                     }
                 }
