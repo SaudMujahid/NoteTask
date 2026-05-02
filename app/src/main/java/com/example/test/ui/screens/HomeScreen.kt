@@ -42,13 +42,15 @@ fun HomeScreen(
     firstName: String = "",
     isDarkTheme: Boolean = false,
     isLoggedIn: Boolean = false,
+    paletteIndex: Int = 0,
     onToggleDarkMode: () -> Unit = {},
     onAuthAction: () -> Unit = {},
     onAddClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onNotesClick: () -> Unit = {},
     onTasksClick: () -> Unit = {},
-    onStatsClick: () -> Unit = {}
+    onStatsClick: () -> Unit = {},
+    onPaletteChange: (Int) -> Unit = {}
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
@@ -206,10 +208,12 @@ fun HomeScreen(
             firstName = firstName,
             isDarkTheme = isDarkTheme,
             isLoggedIn = isLoggedIn,
+            paletteIndex    = paletteIndex,
             onClose = { menuOpen = false },
             onToggleDarkMode = onToggleDarkMode,
             onAuthAction = onAuthAction,
-            onStatsClick = onStatsClick
+            onStatsClick = onStatsClick,
+            onPaletteChange = onPaletteChange
         )
     }
 }
@@ -378,6 +382,8 @@ fun QuickAccessRow(
     onCalendarClick: () -> Unit,
     onNotesClick: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -386,7 +392,8 @@ fun QuickAccessRow(
             title = "Notes",
             subtitle = "Tap to open",
             icon = Icons.Default.Add,
-            backgroundColor = Color(0xFFFFD54F),
+            backgroundColor = colorScheme.primary,
+            contentColor = colorScheme.onPrimary,
             modifier = Modifier.weight(1f),
             onClick = onNotesClick
         )
@@ -394,7 +401,8 @@ fun QuickAccessRow(
             title = "Calendar",
             subtitle = "View schedule",
             icon = Icons.Default.CalendarMonth,
-            backgroundColor = Color(0xFF81C784),
+            backgroundColor = colorScheme.secondary,
+            contentColor = colorScheme.onSecondary,
             modifier = Modifier.weight(1f),
             onClick = onCalendarClick
         )
@@ -407,6 +415,7 @@ fun QuickAccessCard(
     subtitle: String,
     icon: ImageVector,
     backgroundColor: Color,
+    contentColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
@@ -420,11 +429,12 @@ fun QuickAccessCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(icon, null, tint = Color.White, modifier = Modifier.size(28.dp))
+            Icon(icon, null, tint = contentColor, modifier = Modifier.size(28.dp))
             Column {
-                Text(title, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
-                Text(subtitle, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                Text(title, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 16.sp)
+                Text(subtitle, color = contentColor.copy(alpha = 0.8f), fontSize = 12.sp)
             }
         }
     }
 }
+

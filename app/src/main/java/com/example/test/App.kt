@@ -22,7 +22,8 @@ fun MyApp(
     taskRepository: TaskRepository,
     noteRepository: NoteRepository
 ) {
-    var isDarkTheme by remember { mutableStateOf(false) }
+    var isDarkTheme  by remember { mutableStateOf(false) }
+    var paletteIndex by remember { mutableStateOf(0) }
 
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel(factory = ViewModelFactory(userRepository))
@@ -39,7 +40,10 @@ fun MyApp(
         }
     }
 
-    TestTheme(darkTheme = isDarkTheme) {
+    TestTheme(
+        darkTheme = isDarkTheme,
+        paletteIndex = paletteIndex
+    ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             NavHost(
                 navController = navController,
@@ -90,6 +94,7 @@ fun MyApp(
                         firstName = currentUser?.firstName ?: "",
                         isDarkTheme = isDarkTheme,
                         isLoggedIn = currentUser != null,
+                        paletteIndex    = paletteIndex,
                         onToggleDarkMode = { isDarkTheme = !isDarkTheme },
                         onAuthAction = {
                             if (currentUser != null) {
@@ -109,7 +114,7 @@ fun MyApp(
                         onNotesClick    = { navController.navigate("notes") },
                         onTasksClick    = { navController.navigate("today_tasks") },
                         onStatsClick = { navController.navigate("stats") }
-                    )
+                    ) { paletteIndex = it }
                 }
 
                 composable("today_tasks") {
