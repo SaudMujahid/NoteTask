@@ -177,7 +177,7 @@ fun DrawerMenu(
                             )
                             Spacer(Modifier.height(10.dp))
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.padding(start = 4.dp)
                             ) {
                                 AppPalettes.forEachIndexed { index, palette ->
@@ -185,12 +185,12 @@ fun DrawerMenu(
                                     Box(
                                         contentAlignment = Alignment.Center,
                                         modifier = Modifier
-                                            .size(36.dp)
+                                            .size(30.dp)
                                             .clip(CircleShape)
                                             .background(palette.swatch)
                                             .then(
                                                 if (selected) Modifier.border(
-                                                    3.dp,
+                                                    2.5.dp,
                                                     colorScheme.onSurface,
                                                     CircleShape
                                                 ) else Modifier
@@ -202,7 +202,7 @@ fun DrawerMenu(
                                                 Icons.Default.Check,
                                                 contentDescription = null,
                                                 tint = Color.White,
-                                                modifier = Modifier.size(18.dp)
+                                                modifier = Modifier.size(14.dp)
                                             )
                                         }
                                     }
