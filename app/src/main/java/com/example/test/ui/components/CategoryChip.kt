@@ -9,24 +9,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.test.ui.theme.ChipHealthBg
-import com.example.test.ui.theme.ChipHealthText
-import com.example.test.ui.theme.ChipMentalBg
-import com.example.test.ui.theme.ChipMentalText
-import com.example.test.ui.theme.ChipWorkBg
-import com.example.test.ui.theme.ChipWorkText
 
 @Composable
 fun CategoryChip(category: String) {
-    val (bg, textColor) = when (category.uppercase()) {
-        "Personal"        -> ChipHealthBg to ChipHealthText
-        "WORK"          -> ChipWorkBg to ChipWorkText
-        "University" -> ChipMentalBg to ChipMentalText
-        else            -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    val cs = MaterialTheme.colorScheme
+
+    val (bg, textColor) = when (category.trim().lowercase()) {
+        "personal"   -> cs.primaryContainer   to cs.onPrimaryContainer
+        "work"       -> cs.secondaryContainer to cs.onSecondaryContainer
+        "university" -> cs.tertiaryContainer  to cs.onTertiaryContainer
+        else         -> cs.surfaceVariant     to cs.onSurfaceVariant
     }
+
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
