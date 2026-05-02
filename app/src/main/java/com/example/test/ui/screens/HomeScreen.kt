@@ -1,5 +1,6 @@
 package com.example.test.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -55,17 +58,31 @@ fun HomeScreen(
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
 
     val todayTasks = remember(tasks, today) { tasks.filter { it.date == today } }
+    val availableCategories = remember {
+        TaskCategoryFilter.entries
+            .filter { it != TaskCategoryFilter.ALL }
+            .sortedBy { it.label }
+    }
     val pendingTasks = remember(todayTasks) { todayTasks.filter { !it.isChecked } }
     val completedTasks = remember(todayTasks) { todayTasks.filter { it.isChecked } }
     var homeTaskFilter by remember { mutableStateOf(HomeTaskFilter.PENDING) }
-    val filteredTasks = when (homeTaskFilter) {
+    var selectedCategory by remember { mutableStateOf(TaskCategoryFilter.ALL) }
+    val statusFilteredTasks = when (homeTaskFilter) {
         HomeTaskFilter.PENDING -> pendingTasks
         HomeTaskFilter.COMPLETED -> completedTasks
     }
-
+    val filteredTasks = if (selectedCategory == TaskCategoryFilter.ALL) {
+        statusFilteredTasks
+    } else {
+        statusFilteredTasks.filter { TaskCategoryFilter.fromTaskCategory(it.category) == selectedCategory }
+    }
     var menuOpen by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colorScheme.background)
+    ) {
 
         // ── Main content ──────────────────────────────────────────────────
         LazyColumn(
@@ -155,13 +172,34 @@ fun HomeScreen(
             item { Spacer(Modifier.height(10.dp)) }
 
             item {
+                TypeFilterDropdownBadge(
+                    selectedCategory = selectedCategory,
+                    categories = availableCategories,
+                    onCategorySelected = { selectedCategory = it },
+                    badgeBackgroundColor = FilterBadgeBg,
+                    badgeBorderColor = FilterBadgeBorder,
+                    badgeContentColor = BorderBlue
+                )
+            }
+
+            item { Spacer(Modifier.height(10.dp)) }
+
+            item {
                 // TaskListCard now uses SwipeOffTaskItem internally
                 TaskListCard(
                     tasks = filteredTasks,
                     emptyMessage = if (homeTaskFilter == HomeTaskFilter.PENDING) {
-                        "No pending tasks for today."
+                        if (selectedCategory == TaskCategoryFilter.ALL) {
+                            "No pending tasks for today."
+                        } else {
+                            "No pending ${selectedCategory.label} tasks for today."
+                        }
                     } else {
-                        "No completed tasks for today."
+                        if (selectedCategory == TaskCategoryFilter.ALL) {
+                            "No completed tasks for today."
+                        } else {
+                            "No completed ${selectedCategory.label} tasks for today."
+                        }
                     },
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) }
                 )
@@ -227,10 +265,13 @@ fun TaskListCard(
     val colorScheme = MaterialTheme.colorScheme
 
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(3.dp, RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(4.dp),
+        border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.14f))
     ) {
         Column {
             if (tasks.isEmpty()) {
@@ -298,8 +339,9 @@ fun HomeHeader(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .border(2.dp, colorScheme.outline, RoundedCornerShape(20.dp))
+                .shadow(4.dp, RoundedCornerShape(26.dp))
+                .clip(RoundedCornerShape(26.dp))
+                .border(1.dp, colorScheme.primary.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
                 .background(colorScheme.surface)
         ) {
             Row(
@@ -312,18 +354,19 @@ fun HomeHeader(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "$greeting, $displayName",
-                        fontSize = 20.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
                         color = colorScheme.onSurface,
-                        lineHeight = 26.sp
+                        lineHeight = 28.sp,
+                        letterSpacing = 0.2.sp
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = dateString,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Light,
-                        color = colorScheme.onSurface.copy(alpha = 0.45f),
-                        letterSpacing = 0.3.sp
+                        fontWeight = FontWeight.Medium,
+                        color = colorScheme.onSurface.copy(alpha = 0.62f),
+                        letterSpacing = 0.4.sp
                     )
                 }
                 Spacer(Modifier.width(12.dp))
@@ -331,13 +374,20 @@ fun HomeHeader(
             }
         }
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(3.dp)
+                .height(5.dp)
                 .clip(RoundedCornerShape(50))
-                .background(colorScheme.primary)
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            colorScheme.primary,
+                            colorScheme.primary.copy(alpha = 0.45f)
+                        )
+                    )
+                )
         )
     }
 }
