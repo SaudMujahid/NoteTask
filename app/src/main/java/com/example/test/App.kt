@@ -61,7 +61,15 @@ fun MyApp(
                     )
                 }
 
-                composable("login") {
+                composable("stats") {
+                    StatsScreen(
+                        taskViewModel = taskViewModel,
+                        userId = currentUser?.id,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                    composable("login") {
                     LoginScreen(
                         isDarkTheme = isDarkTheme,
                         onToggleDarkMode = { isDarkTheme = !isDarkTheme },
@@ -99,14 +107,8 @@ fun MyApp(
                         },
                         onCalendarClick = { navController.navigate("calendar") },
                         onNotesClick    = { navController.navigate("notes") },
-                        onTasksClick    = { navController.navigate("today_tasks") }
-                    )
-                }
-
-                composable("today_tasks") {
-                    TodayTasksScreen(
-                        taskViewModel = taskViewModel,
-                        onClose = { navController.popBackStack() }
+                        onTasksClick    = { navController.navigate("today_tasks") },
+                        onStatsClick = { navController.navigate("stats") }
                     )
                 }
 

@@ -41,13 +41,14 @@ fun HomeScreen(
     userId: Long?,
     firstName: String = "",
     isDarkTheme: Boolean = false,
-    isLoggedIn: Boolean = false,           // ← new: drives Login / Logout label
+    isLoggedIn: Boolean = false,
     onToggleDarkMode: () -> Unit = {},
-    onAuthAction: () -> Unit = {},         // ← replaces onLogout; caller decides login or logout
+    onAuthAction: () -> Unit = {},
     onAddClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onNotesClick: () -> Unit = {},
-    onTasksClick: () -> Unit = {}
+    onTasksClick: () -> Unit = {},
+    onStatsClick: () -> Unit = {}
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
@@ -207,7 +208,8 @@ fun HomeScreen(
             isLoggedIn = isLoggedIn,
             onClose = { menuOpen = false },
             onToggleDarkMode = onToggleDarkMode,
-            onAuthAction = onAuthAction
+            onAuthAction = onAuthAction,
+            onStatsClick = onStatsClick
         )
     }
 }

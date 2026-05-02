@@ -22,9 +22,9 @@ import com.example.test.ui.theme.ChipWorkText
 @Composable
 fun CategoryChip(category: String) {
     val (bg, textColor) = when (category.uppercase()) {
-        "HEALTH"        -> ChipHealthBg to ChipHealthText
+        "Personal"        -> ChipHealthBg to ChipHealthText
         "WORK"          -> ChipWorkBg to ChipWorkText
-        "MENTAL HEALTH" -> ChipMentalBg to ChipMentalText
+        "University" -> ChipMentalBg to ChipMentalText
         else            -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
     Box(

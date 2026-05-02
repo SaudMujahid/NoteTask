@@ -4,14 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
@@ -20,7 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -28,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,202 +48,184 @@ fun LoginScreen(
 
     val colors = rememberAuthColors(isDarkTheme)
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.background)
+            .background(AuthBgGreen)
             .imePadding()
+            .verticalScroll(rememberScrollState())
     ) {
-        Column(
+        // ── Green header ──────────────────────────────────────────────
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxWidth()
+                .background(AuthHeaderGreen)
+                .padding(top = 72.dp, bottom = 56.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Spacer(Modifier.height(40.dp))
-
-            Text(
-                text = "Welcome\nback",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = colors.headerText,
-                lineHeight = 42.sp,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(Modifier.height(48.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, colors.cardBorder, RoundedCornerShape(24.dp)),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = colors.card),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        "Account details",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = colors.headerText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(Modifier.height(20.dp))
-
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        placeholder = { Text("Email address", color = colors.hint) },
-                        leadingIcon = { Icon(Icons.Outlined.Email, null, tint = colors.primaryAccent) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = authFieldColors(colors),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        singleLine = true
-                    )
-
-                    Spacer(Modifier.height(14.dp))
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        placeholder = { Text("Password", color = colors.hint) },
-                        leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = colors.primaryAccent) },
-                        trailingIcon = {
-                            IconButton(
-                                onClick = { passwordVisible = !passwordVisible },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                                    null,
-                                    tint = colors.hint
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = authFieldColors(colors),
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        singleLine = true
-                    )
-
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                        TextButton(onClick = {}, contentPadding = PaddingValues(0.dp)) {
-                            Text(
-                                "Forgot password?",
-                                color = colors.primaryAccent,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
-                    if (authState is AuthState.Error) {
-                        Text(
-                            (authState as AuthState.Error).message,
-                            color = Color(0xFFFF6B6B),
-                            fontSize = 13.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                        )
-                    }
-
-                    Button(
-                        onClick = {
-                            if (authViewModel != null) {
-                                authViewModel.login(email, password) { onLoginClick() }
-                            } else {
-                                onLoginClick()
-                            }
-                        },
-                        enabled = authState !is AuthState.Loading,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(58.dp),
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.buttonBackground),
-                        border = androidx.compose.foundation.BorderStroke(2.dp, colors.cardBorder)
-                    ) {
-                        if (authState is AuthState.Loading) {
-                            CircularProgressIndicator(
-                                color = colors.primaryAccent,
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(
-                                "Log In",
-                                color = colors.primaryAccent,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .background(colors.primaryAccent, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.ArrowForward,
-                                    null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Welcome Back",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Log in to your account",
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
             }
-
-            Spacer(Modifier.height(24.dp))
-
-            TextButton(onClick = onSignUpClick) {
-                Text(buildAnnotatedString {
-                    withStyle(SpanStyle(color = colors.hint, fontSize = 15.sp)) {
-                        append("Don't have an account? ")
-                    }
-                    withStyle(
-                        SpanStyle(
-                            color = colors.primaryAccent,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    ) {
-                        append("Sign up")
-                    }
-                })
-            }
-
-            Spacer(Modifier.height(40.dp))
         }
 
-        IconButton(
-            onClick = onToggleDarkMode,
+        // ── White card slides over header ─────────────────────────────
+        Surface(
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 16.dp, end = 16.dp)
-                .size(48.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(colors.iconBackground)
+                .fillMaxWidth()
+                .offset(y = (-22).dp),
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            color = Color.White,
+            tonalElevation = 0.dp
         ) {
-            Icon(
-                if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                null,
-                tint = Color(0xFFFFD700),
-                modifier = Modifier.size(24.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 26.dp, vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                // Email
+                FieldLabel("EMAIL ADDRESS")
+                Spacer(Modifier.height(7.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    placeholder = { Text("you@email.com", color = AuthHintGreen) },
+                    leadingIcon = { Icon(Icons.Outlined.Email, null, tint = AuthMediumGreen) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = authFieldColors(colors),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // Password
+                FieldLabel("PASSWORD")
+                Spacer(Modifier.height(7.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    placeholder = { Text("••••••••", color = AuthHintGreen) },
+                    leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = AuthMediumGreen) },
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                                null,
+                                tint = AuthHintGreen
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = authFieldColors(colors),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true
+                )
+
+                // Forgot password
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    TextButton(onClick = {}, contentPadding = PaddingValues(vertical = 4.dp)) {
+                        Text(
+                            "Forgot Password?",
+                            color = AuthHeaderGreen,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Error state
+                if (authState is AuthState.Error) {
+                    Text(
+                        (authState as AuthState.Error).message,
+                        color = Color(0xFFFF6B6B),
+                        fontSize = 13.sp,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
+                }
+
+                // Login button
+                Button(
+                    onClick = {
+                        if (authViewModel != null) authViewModel.login(email, password) { onLoginClick() }
+                        else onLoginClick()
+                    },
+                    enabled = authState !is AuthState.Loading,
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AuthHeaderGreen)
+                ) {
+                    if (authState is AuthState.Loading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(
+                            "LOG IN",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // Divider
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Divider(Modifier.weight(1f), color = AuthDivider)
+                    Text("  or  ", color = AuthHintGreen, fontSize = 11.sp)
+                    Divider(Modifier.weight(1f), color = AuthDivider)
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // Google button
+                OutlinedButton(
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = AuthYellowBg),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, AuthYellowBorder)
+                ) {
+                    Text(
+                        "Continue with Google",
+                        color = AuthYellowText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Sign up link
+                TextButton(onClick = onSignUpClick) {
+                    Text(buildAnnotatedString {
+                        withStyle(SpanStyle(color = AuthMutedGreen, fontSize = 13.sp)) {
+                            append("Don't have an account? ")
+                        }
+                        withStyle(SpanStyle(color = AuthHeaderGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)) {
+                            append("Sign Up")
+                        }
+                    })
+                }
+            }
         }
     }
 }
@@ -258,4 +234,16 @@ fun LoginScreen(
 @Composable
 fun LoginScreenPreview() {
     MaterialTheme { LoginScreen() }
+}
+
+@Composable
+private fun FieldLabel(text: String) {
+    Text(
+        text = text,
+        color = AuthHeaderGreen,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 2.sp,
+        modifier = Modifier.fillMaxWidth()
+    )
 }

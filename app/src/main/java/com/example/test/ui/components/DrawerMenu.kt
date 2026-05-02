@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.compose.material.icons.filled.BarChart
 
 /**
  * Full-screen drawer overlay (scrim + slide-in panel).
@@ -44,7 +45,8 @@ fun DrawerMenu(
     isLoggedIn: Boolean,
     onClose: () -> Unit,
     onToggleDarkMode: () -> Unit,
-    onAuthAction: () -> Unit
+    onAuthAction: () -> Unit,
+    onStatsClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -145,6 +147,22 @@ fun DrawerMenu(
                             onClose()
                         }
                     )
+
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
+                    Spacer(Modifier.height(16.dp))
+
+                    DrawerMenuItem(
+                        icon  = Icons.Default.BarChart,
+                        label = "Progress",
+                        iconTint  = colorScheme.primary,
+                        textColor = colorScheme.onSurface,
+                        onClick = {
+                            onClose()
+                            onStatsClick()
+                        }
+                    )
+
 
                     Spacer(Modifier.height(16.dp))
                     HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
