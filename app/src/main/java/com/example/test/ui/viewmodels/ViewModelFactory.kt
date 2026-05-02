@@ -2,7 +2,6 @@ package com.example.test.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.test.data.repository.NoteRepository
 import com.example.test.data.repository.TaskRepository
 import com.example.test.data.repository.UserRepository
 
@@ -14,8 +13,6 @@ class ViewModelFactory(private val repository: Any) : ViewModelProvider.Factory 
                 AuthViewModel(repository as UserRepository) as T
             modelClass.isAssignableFrom(TaskViewModel::class.java) ->
                 TaskViewModel(repository as TaskRepository) as T
-            modelClass.isAssignableFrom(NoteViewModel::class.java) ->
-                NoteViewModel(repository as NoteRepository) as T
             modelClass.isAssignableFrom(CalendarViewModel::class.java) ->
                 CalendarViewModel(repository as TaskRepository) as T
             else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")

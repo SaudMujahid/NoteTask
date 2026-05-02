@@ -54,6 +54,7 @@ data class Subtask(
     val isChecked: Boolean = false
 )
 
+
 @Entity(
     tableName = "notes",
     foreignKeys = [
@@ -68,7 +69,15 @@ data class Subtask(
 )
 data class Note(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val userId: Long,
-    val content: String,
-    val updatedAt: Long = System.currentTimeMillis()
+    val userId: Long = 0,
+    val title: String = "",
+    val content: String = "",
+    val type: String = "NOTE",
+    val color: String = "DEFAULT",
+    val listItemsJson: String = "[]",
+    val photoUris: String = "",
+    val stickers: String = "",
+    val dateCreated: Long = System.currentTimeMillis(),
+    val dateModified: Long = System.currentTimeMillis(),
+    val isPinned: Boolean = false
 )
