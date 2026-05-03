@@ -23,10 +23,26 @@ class TaskViewModel(private val taskRepository: TaskRepository) : ViewModel() {
         }
     }
 
-    fun addTask(userId: Long, title: String, category: String, date: String) {
+    fun addTask(
+        userId: Long,
+        title: String,
+        category: String,
+        date: String,
+        isScheduled: Boolean = false,
+        scheduleStartMinutes: Int? = null,
+        scheduleEndMinutes: Int? = null
+    ) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            taskRepository.addTask(userId, title, category, date)
+            taskRepository.addTask(
+                userId,
+                title,
+                category,
+                date,
+                isScheduled,
+                scheduleStartMinutes,
+                scheduleEndMinutes
+            )
         }
     }
 

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.example.test.data.dao.*
 import com.example.test.data.models.*
 
-@Database(entities = [User::class, Task::class, Subtask::class, Note::class], version = 2, exportSchema = false)
+@Database(entities = [User::class, Task::class, Subtask::class, Note::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun userDao(): UserDao

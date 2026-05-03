@@ -541,8 +541,21 @@ fun CalendarDayCell(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     
+    // Separate scheduled and non-scheduled tasks
+    val scheduledTasks = day.tasks.filter { it.isScheduled }
+    val nonScheduledTasks = day.tasks.filter { !it.isScheduled }
+    
+    // Count scheduled tasks by completion status
+    val incompleteScheduledCount = scheduledTasks.count { !it.isChecked }
+    val completeScheduledCount = scheduledTasks.count { it.isChecked }
+
+    // Determine background color based on scheduled task status
     val backgroundColor = when {
         isSelected -> colorScheme.primary
+        scheduledTasks.isNotEmpty() && incompleteScheduledCount > 0 -> 
+            colorScheme.error.copy(alpha = 0.2f)  // Light red for incomplete scheduled tasks
+        scheduledTasks.isNotEmpty() && completeScheduledCount > 0 && incompleteScheduledCount == 0 -> 
+            colorScheme.tertiary.copy(alpha = 0.2f)  // Light green for completed scheduled tasks
         day.isToday -> colorScheme.primary.copy(alpha = 0.2f)
         else -> colorScheme.surface
     }
@@ -550,6 +563,8 @@ fun CalendarDayCell(
     val textColor = when {
         isSelected -> colorScheme.onPrimary
         !day.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        scheduledTasks.isNotEmpty() && incompleteScheduledCount > 0 -> colorScheme.error
+        scheduledTasks.isNotEmpty() && completeScheduledCount > 0 && incompleteScheduledCount == 0 -> colorScheme.tertiary
         day.isToday -> colorScheme.primary
         else -> colorScheme.onSurface
     }
@@ -580,13 +595,55 @@ fun CalendarDayCell(
                 color = textColor
             )
 
-            if (day.tasks.isNotEmpty()) {
+            // Show scheduled task indicators (color bars)
+            if (scheduledTasks.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Incomplete scheduled tasks indicator
+                    if (incompleteScheduledCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .height(2.dp)
+                                .width(4.dp)
+                                .clip(RoundedCornerShape(1.dp))
+                                .background(
+                                    if (isSelected) colorScheme.onPrimary 
+                                    else colorScheme.error
+                                )
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                    }
+                    
+                    // Complete scheduled tasks indicator
+                    if (completeScheduledCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .height(2.dp)
+                                .width(4.dp)
+                                .clip(RoundedCornerShape(1.dp))
+                                .background(
+                                    if (isSelected) colorScheme.onPrimary 
+                                    else colorScheme.tertiary
+                                )
+                        )
+                    }
+                }
+            }
+
+            // Show non-scheduled task indicators (dots)
+            if (nonScheduledTasks.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    day.tasks.take(3).forEach { task ->
+                    nonScheduledTasks.take(3).forEach { task ->
                         Box(
                             modifier = Modifier
                                 .size(4.dp)
@@ -602,7 +659,7 @@ fun CalendarDayCell(
                                 )
                         )
                     }
-                    if (day.tasks.size > 3) {
+                    if (nonScheduledTasks.size > 3) {
                         Text(
                             text = "+",
                             fontSize = 8.sp,
@@ -661,7 +718,8 @@ fun DayView(viewModel: CalendarViewModel) {
             item {
                 CollapsibleScheduleCard(
                     isExpanded = isScheduleExpanded,
-                    onToggleExpand = { viewModel.toggleScheduleExpanded() }
+                    onToggleExpand = { viewModel.toggleScheduleExpanded() },
+                    tasks = tasksForSelectedDate
                 )
             }
         }
@@ -1028,7 +1086,8 @@ fun TypeFilterDropdownBadge(
 @Composable
 fun CollapsibleScheduleCard(
     isExpanded: Boolean,
-    onToggleExpand: () -> Unit
+    onToggleExpand: () -> Unit,
+    tasks: List<Task>
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val rotationAngle by animateFloatAsState(
@@ -1088,7 +1147,7 @@ fun CollapsibleScheduleCard(
                 exit = shrinkVertically() + fadeOut()
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp)) {
-                    TimelineView()
+                    TimelineView(tasks = tasks)
                 }
             }
         }
@@ -1096,32 +1155,154 @@ fun CollapsibleScheduleCard(
 }
 
 @Composable
-fun TimelineView() {
+fun TimelineView(tasks: List<Task>) {
     val colorScheme = MaterialTheme.colorScheme
-    val times = listOf(
-        "6:00", "7:00", "8:00", "9:00", "10:00", "11:00",
-        "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
-        "18:00", "19:00", "20:00", "21:00"
-    )
+    val visibleStartMinutes = 0 * 60
+    val visibleEndMinutes = 24 * 60
+    val hourSlotHeight = 72.dp
+    val scheduledTasks = remember(tasks) {
+        tasks.filter {
+            it.isScheduled && it.scheduleStartMinutes != null && it.scheduleEndMinutes != null
+        }.sortedBy { it.scheduleStartMinutes ?: Int.MAX_VALUE }
+    }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        times.forEach { time ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Time blocks",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = colorScheme.onSurfaceVariant
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(hourSlotHeight * 24)
+                .clip(RoundedCornerShape(18.dp))
+                .background(colorScheme.surfaceVariant.copy(alpha = 0.25f))
+                .border(1.dp, colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+        ) {
+            Column(
+                modifier = Modifier.width(56.dp)
             ) {
-                Text(
-                    text = time,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(60.dp)
-                )
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = colorScheme.outlineVariant
-                )
+                repeat(24) { hourIndex ->
+                    val hour = hourIndex
+                    Box(
+                        modifier = Modifier
+                            .height(hourSlotHeight)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        Text(
+                            text = formatTimelineHour(hour),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                // Draw hour divider lines
+                repeat(25) { hourIndex ->
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = hourSlotHeight * hourIndex),
+                        color = colorScheme.outlineVariant.copy(alpha = 0.8f)
+                    )
+                }
+
+                // Draw scheduled task blocks
+                scheduledTasks.forEachIndexed { index, task ->
+                    val rawStart = task.scheduleStartMinutes ?: return@forEachIndexed
+                    val rawEnd = task.scheduleEndMinutes ?: return@forEachIndexed
+                    val startMinutes = rawStart.coerceIn(visibleStartMinutes, visibleEndMinutes)
+                    val endMinutes = rawEnd.coerceIn(visibleStartMinutes, visibleEndMinutes)
+                    if (endMinutes <= startMinutes) return@forEachIndexed
+
+                    val top = hourSlotHeight * ((startMinutes - visibleStartMinutes) / 60f)
+                    val height = hourSlotHeight * ((endMinutes - startMinutes) / 60f)
+                    val (blockBg, blockText) = categoryEventColors(task.category, colorScheme)
+
+                    Box(
+                        modifier = Modifier
+                            .offset(x = 8.dp, y = top + 4.dp)
+                            .fillMaxWidth()
+                            .height(height - 8.dp)
+                            .border(1.dp, blockBg.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(blockBg)
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = task.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = blockText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "${formatMinutesOfDay(startMinutes)} - ${formatMinutesOfDay(endMinutes)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = blockText.copy(alpha = 0.82f)
+                            )
+                        }
+                    }
+                }
             }
         }
+
+        // Show empty state message when no scheduled tasks
+        if (scheduledTasks.isEmpty()) {
+            Text(
+                text = "No scheduled tasks for this day. Click a time slot to add one.",
+                color = colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+private fun formatTimelineHour(hour: Int): String {
+    return when (hour) {
+        0 -> "12 AM"
+        in 1..11 -> "$hour AM"
+        12 -> "12 PM"
+        else -> "${hour - 12} PM"
+    }
+}
+
+private fun formatMinutesOfDay(minutes: Int): String {
+    val clampedMinutes = minutes.coerceIn(0, 23 * 60 + 59)
+    val hour = clampedMinutes / 60
+    val minute = clampedMinutes % 60
+    val suffix = if (hour < 12) "AM" else "PM"
+    val displayHour = when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+    }
+    return String.format(Locale.getDefault(), "%d:%02d %s", displayHour, minute, suffix)
+}
+
+private fun categoryEventColors(category: String, colorScheme: androidx.compose.material3.ColorScheme): Pair<Color, Color> {
+    return when (category.trim().lowercase()) {
+        "personal", "health" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+        "work" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
+        "university", "mental health" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
+        else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariant
     }
 }
 
@@ -1159,15 +1340,29 @@ fun TaskItemRow(
         )
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = task.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = colorScheme.onSurface
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = colorScheme.onSurface
+                )
+                
+                if (task.isScheduled) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = "Scheduled task",
+                        tint = colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 

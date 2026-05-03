@@ -32,7 +32,10 @@ data class Task(
     val title: String,
     val category: String,
     val date: String, // Simplified as String for now
-    val isChecked: Boolean = false
+    val isChecked: Boolean = false,
+    val isScheduled: Boolean = false,
+    val scheduleStartMinutes: Int? = null,
+    val scheduleEndMinutes: Int? = null
 )
 
 @Entity(

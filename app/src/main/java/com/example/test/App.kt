@@ -9,6 +9,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.example.test.data.repository.TaskRepository
 import com.example.test.data.repository.UserRepository
 import com.example.test.data.repository.NoteRepository
@@ -124,12 +126,22 @@ fun MyApp(
                     )
                 }
 
-                composable("add_task") {
+                composable(
+                    "add_task?dateMillis={dateMillis}",
+                    arguments = listOf(
+                        navArgument("dateMillis") {
+                            type = NavType.LongType
+                            defaultValue = -1L
+                        }
+                    )
+                ) { backStackEntry ->
+                    val dateMillis = backStackEntry.arguments?.getLong("dateMillis") ?: -1L
                     currentUser?.let { user ->
                         AddTaskScreen(
                             userId = user.id,
                             taskViewModel = taskViewModel,
-                            onClose = { navController.popBackStack() }
+                            onClose = { navController.popBackStack() },
+                            initialDateMillis = if (dateMillis > 0) dateMillis else null
                         )
                     }
                 }
@@ -139,8 +151,11 @@ fun MyApp(
                         viewModel = calendarViewModel,
                         onNavigateHome = { navController.popBackStack("home", false) },
                         onAddTaskClick = {
-                            if (currentUser != null) navController.navigate("add_task")
-                            else navController.navigate("login")
+                            if (currentUser != null) {
+                                val selectedDate = calendarViewModel.selectedDate.value
+                                val dateMillis = selectedDate.time
+                                navController.navigate("add_task?dateMillis=$dateMillis")
+                            } else navController.navigate("login")
                         }
                     )
                 }

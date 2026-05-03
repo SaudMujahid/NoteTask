@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,7 +26,8 @@ fun TaskItem(
     category: String,
     subtasks: List<String> = emptyList(),
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    isScheduled: Boolean = false
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -38,13 +42,28 @@ fun TaskItem(
                 )
             )
             Spacer(Modifier.width(8.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (checked) colorScheme.onSurface.copy(alpha = 0.4f)
-                    else colorScheme.onSurface
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (checked) colorScheme.onSurface.copy(alpha = 0.4f)
+                        else colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isScheduled) {
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = "Scheduled task",
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 CategoryChip(category)
             }

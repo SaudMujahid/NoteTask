@@ -302,7 +302,8 @@ fun TaskListCard(
                             title = task.title,
                             category = task.category,
                             checked = checked,
-                            onCheckedChange = onCheck
+                            onCheckedChange = onCheck,
+                            isScheduled = task.isScheduled
                         )
                     }
                     if (index < tasks.lastIndex) {
