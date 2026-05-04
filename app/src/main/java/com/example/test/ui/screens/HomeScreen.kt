@@ -148,7 +148,7 @@ fun HomeScreen(
 
             item { Spacer(Modifier.height(12.dp)) }
 
-            item {
+            /*item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatusBadge(
                         text = "pending",
@@ -171,7 +171,7 @@ fun HomeScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(10.dp)) }
+            item { Spacer(Modifier.height(10.dp)) }*/
 
             item {
                 TypeFilterDropdownBadge(

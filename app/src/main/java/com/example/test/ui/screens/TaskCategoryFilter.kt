@@ -2,9 +2,9 @@ package com.example.test.ui.screens
 
 enum class TaskCategoryFilter(val label: String) {
     ALL("All Types"),
-    HEALTH("HEALTH"),
+    Personal("Personal"),
     WORK("WORK"),
-    MENTAL_HEALTH("MENTAL HEALTH"),
+    University("University"),
     OTHER("OTHER");
 
     companion object {
