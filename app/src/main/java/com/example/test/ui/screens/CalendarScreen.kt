@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,9 +62,6 @@ fun CalendarScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        viewModel.setViewMode(CalendarViewMode.DAY)
-    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -864,65 +862,71 @@ fun CollapsibleTaskCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
+                Column {
+                    // Title row — icon now sits inline with the title text
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Outlined.CheckCircle,
+                            contentDescription = null,
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            StatusBadge(
-                                text = "pending",
-                                backgroundColor = PendingBadgeBg,
-                                borderColor = PendingBadgeBorder,
-                                contentColor = PendingBadgeBorder,
-                                count = pendingTasks,
-                                selected = selectedFilter == TaskFilter.PENDING,
-                                onClick = {
-                                    selectedFilter = if (selectedFilter == TaskFilter.PENDING) {
-                                        TaskFilter.ALL
-                                    } else {
-                                        TaskFilter.PENDING
+                    }
+
+                    // Filters only visible when expanded
+                    AnimatedVisibility(
+                        visible = isExpanded,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                StatusBadge(
+                                    text = "pending",
+                                    backgroundColor = PendingBadgeBg,
+                                    borderColor = PendingBadgeBorder,
+                                    contentColor = PendingBadgeBorder,
+                                    count = pendingTasks,
+                                    selected = selectedFilter == TaskFilter.PENDING,
+                                    onClick = {
+                                        selectedFilter = if (selectedFilter == TaskFilter.PENDING)
+                                            TaskFilter.ALL else TaskFilter.PENDING
                                     }
-                                }
-                            )
-                            StatusBadge(
-                                text = "completed",
-                                backgroundColor = CompletedBadgeBg,
-                                borderColor = CompletedBadgeBorder,
-                                contentColor = CompletedBadgeBorder,
-                                count = completedTasks,
-                                selected = selectedFilter == TaskFilter.COMPLETED,
-                                onClick = {
-                                    selectedFilter = if (selectedFilter == TaskFilter.COMPLETED) {
-                                        TaskFilter.ALL
-                                    } else {
-                                        TaskFilter.COMPLETED
+                                )
+                                StatusBadge(
+                                    text = "completed",
+                                    backgroundColor = CompletedBadgeBg,
+                                    borderColor = CompletedBadgeBorder,
+                                    contentColor = CompletedBadgeBorder,
+                                    count = completedTasks,
+                                    selected = selectedFilter == TaskFilter.COMPLETED,
+                                    onClick = {
+                                        selectedFilter = if (selectedFilter == TaskFilter.COMPLETED)
+                                            TaskFilter.ALL else TaskFilter.COMPLETED
                                     }
-                                }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            TypeFilterDropdownBadge(
+                                selectedCategory = selectedCategory,
+                                categories = availableCategories,
+                                onCategorySelected = { selectedCategory = it },
+                                badgeBackgroundColor = FilterBadgeBg,
+                                badgeBorderColor = FilterBadgeBorder,
+                                badgeContentColor = BorderBlue
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        TypeFilterDropdownBadge(
-                            selectedCategory = selectedCategory,
-                            categories = availableCategories,
-                            onCategorySelected = { selectedCategory = it },
-                            badgeBackgroundColor = FilterBadgeBg,
-                            badgeBorderColor = FilterBadgeBorder,
-                            badgeContentColor = BorderBlue
-                        )
                     }
                 }
+
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowUp,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",

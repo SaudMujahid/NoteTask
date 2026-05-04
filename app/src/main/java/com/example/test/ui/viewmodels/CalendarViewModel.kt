@@ -25,7 +25,7 @@ enum class CalendarViewMode {
 
 class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel() {
 
-    private val _viewMode = MutableStateFlow(CalendarViewMode.MONTH)
+    private val _viewMode = MutableStateFlow(CalendarViewMode.DAY)
     val viewMode: StateFlow<CalendarViewMode> = _viewMode.asStateFlow()
 
     private val _currentYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR))
