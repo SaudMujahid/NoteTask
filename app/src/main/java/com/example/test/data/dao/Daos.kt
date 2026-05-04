@@ -33,6 +33,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY id DESC")
     fun getAllTasks(): Flow<List<Task>>
 
+    @Query("SELECT * FROM tasks WHERE id = :taskId LIMIT 1")
+    suspend fun getTaskById(taskId: Long): Task?
+
     @Insert
     suspend fun insertSubtask(subtask: Subtask)
 
@@ -56,6 +59,7 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE userId = :userId ORDER BY isPinned DESC, dateModified DESC")
     fun getNotesForUser(userId: Long): Flow<List<Note>>
+
 
     @Query("""
         SELECT * FROM notes WHERE userId = :userId 
