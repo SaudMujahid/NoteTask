@@ -174,62 +174,58 @@ fun AddTaskScreen(
 
             item { Spacer(Modifier.height(24.dp)) }
 
+            // ── Combined title + description box ────────────────────────────────
             item {
-                // ── Combined title + description box ────────────────────────────────
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     color = cs.surface,
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 1.dp,
-                        color = cs.outline
-                    )
+                    border = androidx.compose.foundation.BorderStroke(1.dp, cs.outline)
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
 
-                        // Top line — title
-                        if (title.isEmpty()) {
-                            Text(
-                                text = "What would you like to do?",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = cs.onSurface.copy(alpha = 0.35f)
+                        // ── Title — hint overlaid behind the field ──
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            if (title.isEmpty()) {
+                                Text(
+                                    text = "What would you like to do?",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = cs.onSurface.copy(alpha = 0.35f)
+                                )
+                            }
+                            BasicTextField(
+                                value = title,
+                                onValueChange = { title = it },
+                                textStyle = LocalTextStyle.current.copy(
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = cs.onSurface
+                                ),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                modifier = Modifier.fillMaxWidth(),
+                                cursorBrush = SolidColor(cs.primary)
                             )
                         }
-                        BasicTextField(
-                            value = title,
-                            onValueChange = { title = it },
-                            textStyle = LocalTextStyle.current.copy(
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = cs.onSurface
-                            ),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            modifier = Modifier.fillMaxWidth(),
-                            cursorBrush = SolidColor(cs.primary)
-                        )
 
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(8.dp))
 
                         HorizontalDivider(
-                            color = cs.outline.copy(alpha = 0.25f),
+                            color = cs.outline.copy(alpha = 0.2f),
                             thickness = 1.dp
                         )
 
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(8.dp))
 
-                        // Bottom section — description
-                        Box(modifier = Modifier
-                            .fillMaxWidth()
-                            .defaultMinSize(minHeight = 80.dp)
-                        ) {
+                        // ── Description — expands only as user types ──
+                        Box(modifier = Modifier.fillMaxWidth()) {
                             if (description.isEmpty()) {
                                 Text(
                                     text = "description",
                                     fontSize = 13.sp,
-                                    color = cs.onSurface.copy(alpha = 0.3f),
-                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    color = cs.onSurface.copy(alpha = 0.3f)
                                 )
                             }
                             BasicTextField(

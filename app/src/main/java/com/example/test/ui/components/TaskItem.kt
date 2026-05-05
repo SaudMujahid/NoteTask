@@ -87,7 +87,7 @@ fun TaskItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier
-                        .padding(start = 40.dp, end = 8.dp)
+                        .padding(start = 48.dp, end = 8.dp) // Increased start padding
                         .fillMaxWidth()
                 )
             }
