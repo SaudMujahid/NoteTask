@@ -381,7 +381,7 @@ private fun OverdueTaskRow(
                     color = cs.onSurface.copy(alpha = 0.6f),
                     fontWeight = FontWeight.Normal,
                     modifier = Modifier
-                        .padding(start = 40.dp, end = 8.dp)
+                        .padding(start = 56.dp, end = 8.dp) // Aligns with task title
                         .fillMaxWidth()
                 )
             }

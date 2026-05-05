@@ -1325,68 +1325,89 @@ fun TaskItemRow(
         else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariant
     }
 
-    Row(
+    var isExpanded by remember { mutableStateOf(false) }
+    val hasDescription = task.description.isNotBlank()
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(colorScheme.background, RoundedCornerShape(8.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(enabled = hasDescription) { isExpanded = !isExpanded }
+            .padding(12.dp)
     ) {
-        Checkbox(
-            checked = task.isChecked,
-            onCheckedChange = { isChecked ->
-                if (isChecked && !task.isChecked) {
-                    playCheckSound(context)
-                }
-                onToggle()
-            },
-            colors = CheckboxDefaults.colors(checkedColor = colorScheme.primary)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = task.isChecked,
+                onCheckedChange = { isChecked ->
+                    if (isChecked && !task.isChecked) {
+                        playCheckSound(context)
+                    }
+                    onToggle()
+                },
+                colors = CheckboxDefaults.colors(checkedColor = colorScheme.primary)
+            )
 
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = colorScheme.onSurface
-                )
-                
-                if (task.isScheduled) {
-                    Icon(
-                        imageVector = Icons.Default.Schedule,
-                        contentDescription = "Scheduled task",
-                        tint = colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = colorScheme.onSurface
                     )
+                    
+                    if (task.isScheduled) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = "Scheduled task",
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = task.category,
+                    fontSize = 10.sp,
+                    color = chipText,
+                    modifier = Modifier
+                        .background(chipBg, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = task.category,
-                fontSize = 10.sp,
-                color = chipText,
-                modifier = Modifier
-                    .background(chipBg, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = colorScheme.error.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
 
-        IconButton(onClick = onDelete) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Delete",
-                tint = colorScheme.error.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp)
-            )
+        AnimatedVisibility(visible = isExpanded && hasDescription) {
+            Column {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = task.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .padding(start = 48.dp, end = 8.dp)
+                        .fillMaxWidth()
+                )
+            }
         }
     }
 }
