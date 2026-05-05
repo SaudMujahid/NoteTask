@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.*
@@ -18,17 +19,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import com.example.test.notification.TaskEvent
+import com.example.test.notification.TaskEventBus
 import com.example.test.ui.components.CategoryChip
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Must stay in sync with CategoryChip's when-branches.
 private val Categories = listOf("Personal", "Work", "University", "Other")
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -45,45 +48,44 @@ fun AddTaskScreen(
     var title    by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(Categories.first()) }
 
-    val todayMillis         = remember { Calendar.getInstance().timeInMillis }
-    var selectedDateMillis  by remember { mutableStateOf(initialDateMillis ?: todayMillis) }
-    var showDatePicker      by remember { mutableStateOf(false) }
-    var isScheduled         by remember { mutableStateOf(false) }
-    var startMinutes        by remember { mutableStateOf(9 * 60) }
-    var endMinutes          by remember { mutableStateOf(10 * 60) }
+    val todayMillis        = remember { Calendar.getInstance().timeInMillis }
+    var selectedDateMillis by remember { mutableStateOf(initialDateMillis ?: todayMillis) }
+    var showDatePicker     by remember { mutableStateOf(false) }
+    var isScheduled        by remember { mutableStateOf(false) }
+    var startMinutes       by remember { mutableStateOf(9 * 60) }
+    var endMinutes         by remember { mutableStateOf(10 * 60) }
 
-    val dateFormatter    = remember { SimpleDateFormat("yyyy-MM-dd",      Locale.getDefault()) }
-    val displayFormatter = remember { SimpleDateFormat("EEEE, MMM d",     Locale.getDefault()) }
+    // ── NEW: optional notification time (null = no notification) ──
+    var notificationMinutes by remember { mutableStateOf<Int?>(null) }
+
+    val dateFormatter    = remember { SimpleDateFormat("yyyy-MM-dd",  Locale.getDefault()) }
+    val displayFormatter = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()) }
 
     val date        = remember(selectedDateMillis) { dateFormatter.format(Date(selectedDateMillis)) }
     val dateDisplay = remember(selectedDateMillis) { displayFormatter.format(Date(selectedDateMillis)) }
     val timeFormatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
 
     fun formatMinutes(minutes: Int): String {
-        val calendar = Calendar.getInstance().apply {
+        val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, minutes / 60)
             set(Calendar.MINUTE, minutes % 60)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
-        return timeFormatter.format(calendar.time)
+        return timeFormatter.format(cal.time)
     }
 
     fun pickTime(initialMinutes: Int, onPicked: (Int) -> Unit) {
-        val hour = initialMinutes / 60
-        val minute = initialMinutes % 60
         TimePickerDialog(
             context,
-            { _, pickedHour, pickedMinute ->
-                onPicked(pickedHour * 60 + pickedMinute)
-            },
-            hour,
-            minute,
+            { _, pickedHour, pickedMinute -> onPicked(pickedHour * 60 + pickedMinute) },
+            initialMinutes / 60,
+            initialMinutes % 60,
             false
         ).show()
     }
 
-    // ── Date Picker Dialog ───────────────────────────────────────────────
+    // ── Date Picker Dialog (unchanged) ───────────────────────────────────
     if (showDatePicker) {
         val dpState = rememberDatePickerState(
             initialSelectedDateMillis = selectedDateMillis,
@@ -106,20 +108,20 @@ fun AddTaskScreen(
                 }
             },
             colors = DatePickerDefaults.colors(
-                containerColor            = cs.surface,
-                titleContentColor         = cs.onSurface,
-                headlineContentColor      = cs.onSurface,
-                weekdayContentColor       = cs.onSurfaceVariant,
-                subheadContentColor       = cs.onSurfaceVariant,
-                yearContentColor          = cs.onSurfaceVariant,
-                currentYearContentColor   = cs.primary,
-                selectedYearContentColor  = cs.onPrimary,
-                selectedYearContainerColor= cs.primary,
-                dayContentColor           = cs.onSurface,
-                selectedDayContentColor   = cs.onPrimary,
-                selectedDayContainerColor = cs.primary,
-                todayContentColor         = cs.primary,
-                todayDateBorderColor      = cs.primary
+                containerColor             = cs.surface,
+                titleContentColor          = cs.onSurface,
+                headlineContentColor       = cs.onSurface,
+                weekdayContentColor        = cs.onSurfaceVariant,
+                subheadContentColor        = cs.onSurfaceVariant,
+                yearContentColor           = cs.onSurfaceVariant,
+                currentYearContentColor    = cs.primary,
+                selectedYearContentColor   = cs.onPrimary,
+                selectedYearContainerColor = cs.primary,
+                dayContentColor            = cs.onSurface,
+                selectedDayContentColor    = cs.onPrimary,
+                selectedDayContainerColor  = cs.primary,
+                todayContentColor          = cs.primary,
+                todayDateBorderColor       = cs.primary
             )
         ) {
             DatePicker(
@@ -140,7 +142,6 @@ fun AddTaskScreen(
             .fillMaxSize()
             .background(cs.background)
     ) {
-
         IconButton(
             onClick = onClose,
             modifier = Modifier
@@ -165,12 +166,9 @@ fun AddTaskScreen(
                 )
             }
 
-            item {
-                Spacer(Modifier.height(24.dp))
-            }
+            item { Spacer(Modifier.height(24.dp)) }
 
             item {
-                // ── Task name ────────────────────────────────────────────────
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -185,12 +183,9 @@ fun AddTaskScreen(
                 )
             }
 
-            item {
-                Spacer(Modifier.height(20.dp))
-            }
+            item { Spacer(Modifier.height(20.dp)) }
 
             item {
-                // ── Category label ───────────────────────────────────────────
                 Text(
                     "Category",
                     fontSize = 13.sp,
@@ -198,8 +193,6 @@ fun AddTaskScreen(
                     color = cs.onSurface.copy(alpha = 0.55f),
                     modifier = Modifier.padding(start = 2.dp, bottom = 10.dp)
                 )
-
-                // Chip selector — tapping a chip selects it
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -228,69 +221,117 @@ fun AddTaskScreen(
                         }
                     }
                 }
+                // ── REMOVED: Preview chip row ──
             }
 
-            item {
-                Spacer(Modifier.height(6.dp))
-
-                // Live chip preview so user sees exactly how it will look in the list
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(start = 2.dp, top = 4.dp)
-                ) {
-                    Text(
-                        "Preview:",
-                        fontSize = 11.sp,
-                        color = cs.onSurface.copy(alpha = 0.35f)
-                    )
-                    CategoryChip(category = category)
-                }
-            }
+            item { Spacer(Modifier.height(20.dp)) }
 
             item {
-                Spacer(Modifier.height(20.dp))
-            }
-
-            item {
-                // ── Date picker ──────────────────────────────────────────────
+                // ── Date + Time side by side ─────────────────────────────────
                 Text(
-                    "Date",
+                    "Date & Time",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = cs.onSurface.copy(alpha = 0.55f),
                     modifier = Modifier.padding(start = 2.dp, bottom = 10.dp)
                 )
 
-                Surface(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = cs.surface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, cs.outline)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
+                    // ── Date box (existing style) ──
+                    Surface(
+                        onClick = { showDatePicker = true },
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = cs.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, cs.outline)
                     ) {
-                        Text(dateDisplay, color = cs.onSurface)
-                        Icon(
-                            Icons.Default.DateRange,
-                            contentDescription = "Select date",
-                            tint = cs.primary
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = dateDisplay,
+                                fontSize = 13.sp,
+                                color = cs.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                Icons.Default.DateRange,
+                                contentDescription = "Select date",
+                                tint = cs.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // ── Time box (NEW — same style as Date) ──
+                    Surface(
+                        onClick = {
+                            val init = notificationMinutes ?: (Calendar.getInstance().run {
+                                get(Calendar.HOUR_OF_DAY) * 60 + get(Calendar.MINUTE)
+                            })
+                            pickTime(init) { picked -> notificationMinutes = picked }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        // Tinted when a time is set — matches selected Date feel
+                        color = if (notificationMinutes != null)
+                            cs.primaryContainer
+                        else
+                            cs.surface,
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = if (notificationMinutes != null) 1.5.dp else 1.dp,
+                            color = if (notificationMinutes != null) cs.primary else cs.outline
                         )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = notificationMinutes?.let { formatMinutes(it) } ?: "Set Time",
+                                fontSize = 13.sp,
+                                color = if (notificationMinutes != null) cs.primary
+                                else cs.onSurface.copy(alpha = 0.45f),
+                                modifier = Modifier.weight(1f)
+                            )
+                            // Clock icon — or ✕ to clear if time is set
+                            if (notificationMinutes != null) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear time",
+                                    tint = cs.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable { notificationMinutes = null }
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.AccessTime,
+                                    contentDescription = "Set time",
+                                    tint = cs.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            item {
-                Spacer(Modifier.height(16.dp))
-            }
+            item { Spacer(Modifier.height(16.dp)) }
 
             item {
                 Row(
@@ -313,7 +354,7 @@ fun AddTaskScreen(
                     }
                     Switch(
                         checked = isScheduled,
-                        onCheckedChange = { checked -> isScheduled = checked }
+                        onCheckedChange = { isScheduled = it }
                     )
                 }
             }
@@ -321,10 +362,9 @@ fun AddTaskScreen(
             if (isScheduled) {
                 item {
                     Spacer(Modifier.height(12.dp))
-
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
-                            onClick = { pickTime(startMinutes) { picked -> startMinutes = picked } },
+                            onClick = { pickTime(startMinutes) { startMinutes = it } },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp)
                         ) {
@@ -334,7 +374,7 @@ fun AddTaskScreen(
                             }
                         }
                         OutlinedButton(
-                            onClick = { pickTime(endMinutes) { picked -> endMinutes = picked } },
+                            onClick = { pickTime(endMinutes) { endMinutes = it } },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp)
                         ) {
@@ -347,28 +387,35 @@ fun AddTaskScreen(
                 }
             }
 
-            item {
-                Spacer(Modifier.height(32.dp))
-            }
+            item { Spacer(Modifier.height(32.dp)) }
 
             item {
-                // ── Save button ──────────────────────────────────────────────
                 Button(
                     onClick = {
                         if (title.isNotBlank()) {
                             val normalizedEnd = if (isScheduled && endMinutes <= startMinutes) {
                                 (startMinutes + 60).coerceAtMost(23 * 60 + 59)
-                            } else {
-                                endMinutes
-                            }
+                            } else endMinutes
+
                             taskViewModel.addTask(
-                                userId,
-                                title,
-                                category,
-                                date,
-                                isScheduled = isScheduled,
-                                scheduleStartMinutes = if (isScheduled) startMinutes else null,
-                                scheduleEndMinutes = if (isScheduled) normalizedEnd else null
+                                userId    = userId,
+                                title     = title,
+                                category  = category,
+                                date      = date,
+                                isScheduled           = isScheduled,
+                                scheduleStartMinutes  = if (isScheduled) startMinutes else null,
+                                scheduleEndMinutes    = if (isScheduled) normalizedEnd else null,
+                                // ── pass notification time to ViewModel ──
+                                onSaved = { savedTask ->
+                                    notificationMinutes?.let { minutes ->
+                                        TaskEventBus.notifyObservers(
+                                            TaskEvent.TaskScheduled(
+                                                task       = savedTask.copy(scheduleStartMinutes = minutes),
+                                                dateString = date
+                                            )
+                                        )
+                                    }
+                                }
                             )
                             onClose()
                         }

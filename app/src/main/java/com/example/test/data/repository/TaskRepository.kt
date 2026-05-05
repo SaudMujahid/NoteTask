@@ -12,29 +12,14 @@ class TaskRepository(private val taskDao: TaskDao) {
     fun getTasksForUser(userId: Long): Flow<List<Task>> = taskDao.getTasksForUser(userId)
     fun getAllTasks(): Flow<List<Task>> = taskDao.getAllTasks()
 
-    suspend fun addTask(
-        userId: Long,
-        title: String,
-        category: String,
-        date: String,
-        isScheduled: Boolean = false,
-        scheduleStartMinutes: Int? = null,
-        scheduleEndMinutes: Int? = null
-    ) {
-        val task = Task(
-            userId = userId,
-            title = title,
-            category = category,
-            date = date,
-            isScheduled = isScheduled,
-            scheduleStartMinutes = scheduleStartMinutes,
-            scheduleEndMinutes = scheduleEndMinutes
-        )
-        taskDao.insertTask(task)
+    suspend fun addTask(task: Task): Long {
+        val insertedId = taskDao.insertTask(task)
+        val taskWithId = task.copy(id = insertedId)
 
-        if (isScheduled) {
-            TaskEventBus.notifyObservers(TaskEvent.TaskScheduled(task, date))
+        if (taskWithId.isScheduled) {
+            TaskEventBus.notifyObservers(TaskEvent.TaskScheduled(taskWithId, taskWithId.date))
         }
+        return insertedId
     }
 
     suspend fun toggleTask(taskId: Long, isChecked: Boolean) {

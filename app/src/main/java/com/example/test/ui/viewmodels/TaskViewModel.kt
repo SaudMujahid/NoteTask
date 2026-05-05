@@ -30,21 +30,25 @@ class TaskViewModel(private val taskRepository: TaskRepository) : ViewModel() {
         date: String,
         isScheduled: Boolean = false,
         scheduleStartMinutes: Int? = null,
-        scheduleEndMinutes: Int? = null
+        scheduleEndMinutes: Int? = null,
+        onSaved: (Task) -> Unit = {}
     ) {
-        if (title.isBlank()) return
         viewModelScope.launch {
-            taskRepository.addTask(
-                userId,
-                title,
-                category,
-                date,
-                isScheduled,
-                scheduleStartMinutes,
-                scheduleEndMinutes
+            val task = Task(
+                userId               = userId,
+                title                = title,
+                category             = category,
+                date                 = date,
+                isScheduled          = isScheduled,
+                scheduleStartMinutes = scheduleStartMinutes,
+                scheduleEndMinutes   = scheduleEndMinutes
             )
+            val insertedId = taskRepository.addTask(task)  // Room returns Long
+            onSaved(task.copy(id = insertedId))
         }
     }
+
+
 
     fun toggleTask(task: Task) {
         viewModelScope.launch {
