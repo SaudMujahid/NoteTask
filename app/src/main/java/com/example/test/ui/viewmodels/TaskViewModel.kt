@@ -14,9 +14,11 @@ class TaskViewModel(private val taskRepository: TaskRepository) : ViewModel() {
     private val _tasks = MutableStateFlow<List<Task>>(emptyList())
     val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
 
-    // Called from MainActivity's LaunchedEffect once user is logged in
+    private var userJob: kotlinx.coroutines.Job? = null
+
     fun setUser(userId: Long) {
-        viewModelScope.launch {
+        userJob?.cancel()
+        userJob = viewModelScope.launch {
             taskRepository.getTasksForUser(userId).collect { taskList ->
                 _tasks.value = taskList
             }
@@ -26,24 +28,30 @@ class TaskViewModel(private val taskRepository: TaskRepository) : ViewModel() {
     fun addTask(
         userId: Long,
         title: String,
+        description: String = "",
         category: String,
         date: String,
         isScheduled: Boolean = false,
         scheduleStartMinutes: Int? = null,
         scheduleEndMinutes: Int? = null,
+        notificationMinutes: Int? = null,
         onSaved: (Task) -> Unit = {}
     ) {
+        if (title.isBlank()) return
+
         viewModelScope.launch {
             val task = Task(
                 userId               = userId,
                 title                = title,
+                description           = description,
                 category             = category,
                 date                 = date,
                 isScheduled          = isScheduled,
                 scheduleStartMinutes = scheduleStartMinutes,
-                scheduleEndMinutes   = scheduleEndMinutes
+                scheduleEndMinutes   = scheduleEndMinutes,
+                notificationMinutes  = notificationMinutes
             )
-            val insertedId = taskRepository.addTask(task)  // Room returns Long
+            val insertedId = taskRepository.addTask(task)
             onSaved(task.copy(id = insertedId))
         }
     }

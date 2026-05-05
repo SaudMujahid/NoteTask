@@ -30,12 +30,14 @@ data class Task(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val userId: Long,
     val title: String,
+    val description: String = "",
     val category: String,
     val date: String, // Simplified as String for now
     val isChecked: Boolean = false,
     val isScheduled: Boolean = false,
     val scheduleStartMinutes: Int? = null,
-    val scheduleEndMinutes: Int? = null
+    val scheduleEndMinutes: Int? = null,
+    val notificationMinutes: Int? = null
 )
 
 @Entity(

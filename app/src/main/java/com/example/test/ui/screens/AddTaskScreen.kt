@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import com.example.test.notification.TaskEvent
 import com.example.test.notification.TaskEventBus
@@ -57,6 +61,8 @@ fun AddTaskScreen(
 
     // ── NEW: optional notification time (null = no notification) ──
     var notificationMinutes by remember { mutableStateOf<Int?>(null) }
+
+    var description by remember {  mutableStateOf("")}
 
     val dateFormatter    = remember { SimpleDateFormat("yyyy-MM-dd",  Locale.getDefault()) }
     val displayFormatter = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()) }
@@ -169,18 +175,76 @@ fun AddTaskScreen(
             item { Spacer(Modifier.height(24.dp)) }
 
             item {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Task name") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                // ── Combined title + description box ────────────────────────────────
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = cs.primary,
-                        unfocusedBorderColor = cs.outline
+                    shape = RoundedCornerShape(12.dp),
+                    color = cs.surface,
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.dp,
+                        color = cs.outline
                     )
-                )
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+
+                        // Top line — title
+                        if (title.isEmpty()) {
+                            Text(
+                                text = "What would you like to do?",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = cs.onSurface.copy(alpha = 0.35f)
+                            )
+                        }
+                        BasicTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            textStyle = LocalTextStyle.current.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = cs.onSurface
+                            ),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            modifier = Modifier.fillMaxWidth(),
+                            cursorBrush = SolidColor(cs.primary)
+                        )
+
+                        Spacer(Modifier.height(10.dp))
+
+                        HorizontalDivider(
+                            color = cs.outline.copy(alpha = 0.25f),
+                            thickness = 1.dp
+                        )
+
+                        Spacer(Modifier.height(10.dp))
+
+                        // Bottom section — description
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 80.dp)
+                        ) {
+                            if (description.isEmpty()) {
+                                Text(
+                                    text = "description",
+                                    fontSize = 13.sp,
+                                    color = cs.onSurface.copy(alpha = 0.3f),
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                )
+                            }
+                            BasicTextField(
+                                value = description,
+                                onValueChange = { description = it },
+                                textStyle = LocalTextStyle.current.copy(
+                                    fontSize = 13.sp,
+                                    color = cs.onSurface.copy(alpha = 0.75f)
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                cursorBrush = SolidColor(cs.primary)
+                            )
+                        }
+                    }
+                }
             }
 
             item { Spacer(Modifier.height(20.dp)) }
@@ -193,12 +257,13 @@ fun AddTaskScreen(
                     color = cs.onSurface.copy(alpha = 0.55f),
                     modifier = Modifier.padding(start = 2.dp, bottom = 10.dp)
                 )
-                FlowRow(
+
+                // ── Single scrollable row — no wrapping ──
+                LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    contentPadding = PaddingValues(horizontal = 2.dp)
                 ) {
-                    Categories.forEach { cat ->
+                    items(Categories) { cat ->
                         val selected = cat == category
                         Box(
                             modifier = Modifier
@@ -221,8 +286,9 @@ fun AddTaskScreen(
                         }
                     }
                 }
-                // ── REMOVED: Preview chip row ──
+                // Preview row is removed
             }
+
 
             item { Spacer(Modifier.height(20.dp)) }
 
@@ -400,22 +466,13 @@ fun AddTaskScreen(
                             taskViewModel.addTask(
                                 userId    = userId,
                                 title     = title,
+                                description = description,
                                 category  = category,
                                 date      = date,
                                 isScheduled           = isScheduled,
                                 scheduleStartMinutes  = if (isScheduled) startMinutes else null,
                                 scheduleEndMinutes    = if (isScheduled) normalizedEnd else null,
-                                // ── pass notification time to ViewModel ──
-                                onSaved = { savedTask ->
-                                    notificationMinutes?.let { minutes ->
-                                        TaskEventBus.notifyObservers(
-                                            TaskEvent.TaskScheduled(
-                                                task       = savedTask.copy(scheduleStartMinutes = minutes),
-                                                dateString = date
-                                            )
-                                        )
-                                    }
-                                }
+                                notificationMinutes   = notificationMinutes
                             )
                             onClose()
                         }

@@ -1,8 +1,10 @@
 package com.example.test.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,11 +29,18 @@ fun TaskItem(
     subtasks: List<String> = emptyList(),
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    isScheduled: Boolean = false
+    isScheduled: Boolean = false,
+    modifier: Modifier = Modifier,
+    description: String? = null,        // NEW: task description
+    isExpanded: Boolean = false         // NEW: expanded state
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = checked,
@@ -69,7 +78,22 @@ fun TaskItem(
             }
         }
 
-        // Subtasks (indented)
+        // ── Expandable description ──
+        AnimatedVisibility(visible = isExpanded && !description.isNullOrBlank()) {
+            Column {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = description ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .padding(start = 40.dp, end = 8.dp)
+                        .fillMaxWidth()
+                )
+            }
+        }
+
+        // Subtasks (indented) — shown regardless of expansion
         subtasks.forEach { subtask ->
             Row(
                 modifier = Modifier.padding(start = SubtaskIndent, top = 8.dp),

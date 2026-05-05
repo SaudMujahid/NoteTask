@@ -16,7 +16,7 @@ class TaskRepository(private val taskDao: TaskDao) {
         val insertedId = taskDao.insertTask(task)
         val taskWithId = task.copy(id = insertedId)
 
-        if (taskWithId.isScheduled) {
+        if (taskWithId.isScheduled || taskWithId.notificationMinutes != null) {
             TaskEventBus.notifyObservers(TaskEvent.TaskScheduled(taskWithId, taskWithId.date))
         }
         return insertedId

@@ -1,6 +1,7 @@
 package com.example.test.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,6 +45,9 @@ fun TodayTasksScreen(
 
     val hasOverdue = overdueTasks.isNotEmpty()
 
+    // Track which task id is currently expanded
+    var expandedTaskId by remember { mutableStateOf<Long?>(null) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -78,8 +82,6 @@ fun TodayTasksScreen(
         containerColor = cs.background
     ) { padding ->
 
-        // Use Column + weight so today's card naturally fills remaining space,
-        // and shrinks proportionally when the overdue section appears.
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -89,18 +91,17 @@ fun TodayTasksScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-            // ── TODAY card — weight(1f) so it always fills available height ──
+            // ── TODAY card ──
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(if (hasOverdue) 1.4f else 1f),   // slightly larger slice when overdue exists
+                    .weight(if (hasOverdue) 1.4f else 1f),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = cs.surface),
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
 
-                    // Section header
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -114,7 +115,6 @@ fun TodayTasksScreen(
                             fontWeight = FontWeight.Bold,
                             color = cs.onSurface
                         )
-                        // Task count badge
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
@@ -133,7 +133,6 @@ fun TodayTasksScreen(
                     HorizontalDivider(color = cs.outline.copy(alpha = 0.2f))
 
                     if (todayTasks.isEmpty()) {
-                        // Empty state — centred inside the card
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -156,22 +155,38 @@ fun TodayTasksScreen(
                             }
                         }
                     } else {
-                        // Scrollable task list inside the card
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(rememberScrollState())
                         ) {
                             todayTasks.forEachIndexed { index, task ->
+                                // Compute expansion state for THIS specific task
+                                val taskIsExpanded = expandedTaskId == task.id
+                                val taskHasDescription = task.description.isNotBlank()
+
                                 SwipeOffTaskItem(
                                     checked = task.isChecked,
                                     onCheckedChange = { taskViewModel.toggleTask(task) }
                                 ) { checked, onCheck ->
+                                    // Determine click modifier based on whether description exists
+                                    val clickModifier = if (taskHasDescription) {
+                                        Modifier.clickable {
+                                            expandedTaskId = if (taskIsExpanded) null else task.id
+                                        }
+                                    } else {
+                                        Modifier
+                                    }
+
                                     TaskItem(
                                         title = task.title,
                                         category = task.category,
                                         checked = checked,
-                                        onCheckedChange = onCheck
+                                        onCheckedChange = onCheck,
+                                        isScheduled = task.isScheduled,
+                                        modifier = clickModifier,
+                                        description = task.description,
+                                        isExpanded = taskIsExpanded
                                     )
                                 }
                                 if (index < todayTasks.lastIndex) {
@@ -187,7 +202,7 @@ fun TodayTasksScreen(
                 }
             }
 
-            // ── OVERDUE card — only shown when there are overdue tasks ───────
+            // ── OVERDUE card ──
             if (hasOverdue) {
                 Card(
                     modifier = Modifier
@@ -199,7 +214,6 @@ fun TodayTasksScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
 
-                        // Section header — matches today's style, error-tinted
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -244,15 +258,31 @@ fun TodayTasksScreen(
                                 }
                                 val dateText = parsedDate?.let { displayFormatter.format(it) } ?: task.date
 
+                                // Compute expansion state for THIS specific task
+                                val taskIsExpanded = expandedTaskId == task.id
+                                val taskHasDescription = task.description.isNotBlank()
+
                                 SwipeOffTaskItem(
                                     checked = task.isChecked,
                                     onCheckedChange = { taskViewModel.toggleTask(task) }
                                 ) { checked, onCheck ->
+                                    // Determine click modifier
+                                    val clickModifier = if (taskHasDescription) {
+                                        Modifier.clickable {
+                                            expandedTaskId = if (taskIsExpanded) null else task.id
+                                        }
+                                    } else {
+                                        Modifier
+                                    }
+
                                     OverdueTaskRow(
                                         task = task,
                                         dateText = dateText,
                                         checked = checked,
-                                        onCheckedChange = onCheck
+                                        onCheckedChange = onCheck,
+                                        modifier = clickModifier,
+                                        description = task.description,
+                                        isExpanded = taskIsExpanded
                                     )
                                 }
 
@@ -273,64 +303,88 @@ fun TodayTasksScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Overdue task row — matches TaskItem layout with date badge on the right
+// Updated OverdueTaskRow with expandable description
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun OverdueTaskRow(
     task: Task,
     dateText: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    isExpanded: Boolean = false
 ) {
     val cs = MaterialTheme.colorScheme
 
-    Row(
-        modifier = Modifier
+    Column(
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = CheckboxDefaults.colors(
-                    checkedColor = cs.error,
-                    uncheckedColor = cs.onSurfaceVariant
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = cs.error,
+                        uncheckedColor = cs.onSurfaceVariant
+                    )
                 )
-            )
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = task.title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (checked) cs.onSurface.copy(alpha = 0.4f) else cs.onSurface
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    CategoryChip(category = task.category)
+                }
+            }
+
             Spacer(Modifier.width(8.dp))
-            Column {
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(cs.error.copy(alpha = 0.12f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
                 Text(
-                    text = task.title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (checked) cs.onSurface.copy(alpha = 0.4f) else cs.onSurface
+                    text = dateText,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = cs.error
                 )
-                Spacer(Modifier.height(4.dp))
-                CategoryChip(category = task.category)
             }
         }
 
-        Spacer(Modifier.width(8.dp))
-
-        // Date badge
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(cs.error.copy(alpha = 0.12f))
-                .padding(horizontal = 10.dp, vertical = 4.dp)
+        // Expandable description
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isExpanded && !description.isNullOrBlank()
         ) {
-            Text(
-                text = dateText,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = cs.error
-            )
+            Column {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = description ?: "",
+                    fontSize = 13.sp,
+                    color = cs.onSurface.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Normal,
+                    modifier = Modifier
+                        .padding(start = 40.dp, end = 8.dp)
+                        .fillMaxWidth()
+                )
+            }
         }
     }
 }

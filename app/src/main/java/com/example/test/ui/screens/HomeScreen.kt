@@ -268,6 +268,8 @@ fun TaskListCard(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
+    var expandedTaskId by remember { mutableStateOf<Long?>(null) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -293,17 +295,31 @@ fun TaskListCard(
                 }
             } else {
                 tasks.forEachIndexed { index, task ->
+                    val taskIsExpanded = expandedTaskId == task.id
+                    val taskHasDescription = task.description.isNotBlank()
+
                     // ↓ SwipeOffTaskItem wraps each row with animation + sound
                     SwipeOffTaskItem(
                         checked = task.isChecked,
                         onCheckedChange = { onCheckedChange(task) }
                     ) { checked, onCheck ->
+                        val clickModifier = if (taskHasDescription) {
+                            Modifier.clickable {
+                                expandedTaskId = if (taskIsExpanded) null else task.id
+                            }
+                        } else {
+                            Modifier
+                        }
+
                         TaskItem(
                             title = task.title,
                             category = task.category,
                             checked = checked,
                             onCheckedChange = onCheck,
-                            isScheduled = task.isScheduled
+                            isScheduled = task.isScheduled,
+                            modifier = clickModifier,
+                            description = task.description,
+                            isExpanded = taskIsExpanded
                         )
                     }
                     if (index < tasks.lastIndex) {

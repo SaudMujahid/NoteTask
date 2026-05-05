@@ -20,12 +20,12 @@ class NotificationObserver(private val context: Context) : TaskObserver {
                 TaskScheduler.cancelTaskNotification(context, event.task)
             }
             is TaskEvent.TaskUncompleted -> {
-                // Only re-schedule if this task was originally scheduled
-                if (event.task.isScheduled) {
+                // Only re-schedule if this task was originally scheduled or has a reminder
+                if (event.task.isScheduled || event.task.notificationMinutes != null) {
                     TaskScheduler.scheduleTaskNotification(
                         context = context,
                         task = event.task,
-                        taskDate = event.task.date // pulled from the Task model
+                        taskDate = event.task.date
                     )
                 }
             }

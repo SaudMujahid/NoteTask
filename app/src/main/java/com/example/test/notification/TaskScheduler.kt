@@ -16,12 +16,14 @@ object TaskScheduler {
     private const val TAG = "TaskScheduler"
 
     fun scheduleTaskNotification(context: Context, task: Task, taskDate: String) {
-        if (task.scheduleStartMinutes == null) {
-            Log.w(TAG, "Skipping task '${task.title}' — no start time set")
+        val minutes = task.notificationMinutes ?: task.scheduleStartMinutes
+
+        if (minutes == null) {
+            Log.w(TAG, "Skipping task '${task.title}' — no notification or start time set")
             return
         }
 
-        val triggerAtMillis = parseTaskDateToMillis(taskDate, task.scheduleStartMinutes)
+        val triggerAtMillis = parseTaskDateToMillis(taskDate, minutes)
         if (triggerAtMillis == null) {
             Log.e(TAG, "Failed to parse date '$taskDate' for task '${task.title}'")
             return
