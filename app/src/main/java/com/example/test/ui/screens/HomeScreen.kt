@@ -41,19 +41,17 @@ private enum class HomeTaskFilter {
 @Composable
 fun HomeScreen(
     taskViewModel: TaskViewModel,
-    userId: Long?,
-    firstName: String = "",
+    firstName: String = "User",
     isDarkTheme: Boolean = false,
-    isLoggedIn: Boolean = false,
     paletteIndex: Int = 0,
     onToggleDarkMode: () -> Unit = {},
-    onAuthAction: () -> Unit = {},
     onAddClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onNotesClick: () -> Unit = {},
     onTasksClick: () -> Unit = {},
     onStatsClick: () -> Unit = {},
-    onPaletteChange: (Int) -> Unit = {}
+    onPaletteChange: (Int) -> Unit = {},
+    onNameChange: (String) -> Unit = {}
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
@@ -79,6 +77,32 @@ fun HomeScreen(
         statusFilteredTasks.filter { TaskCategoryFilter.fromTaskCategory(it.category) == selectedCategory }
     }
     var menuOpen by remember { mutableStateOf(false) }
+    var showNameDialog by remember { mutableStateOf(false) }
+
+    if (showNameDialog) {
+        var tempName by remember { mutableStateOf(firstName) }
+        AlertDialog(
+            onDismissRequest = { showNameDialog = false },
+            title = { Text("Change Name") },
+            text = {
+                OutlinedTextField(
+                    value = tempName,
+                    onValueChange = { tempName = it },
+                    label = { Text("Your Name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onNameChange(tempName)
+                    showNameDialog = false
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNameDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -99,7 +123,8 @@ fun HomeScreen(
             item {
                 HomeHeader(
                     firstName = firstName,
-                    onMenuClick = { menuOpen = true }
+                    onMenuClick = { menuOpen = true },
+                    onHeaderClick = { showNameDialog = true }
                 )
             }
             item { Spacer(Modifier.height(20.dp)) }
@@ -148,31 +173,6 @@ fun HomeScreen(
 
             item { Spacer(Modifier.height(12.dp)) }
 
-            /*item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatusBadge(
-                        text = "pending",
-                        backgroundColor = PendingBadgeBg,
-                        borderColor = PendingBadgeBorder,
-                        contentColor = PendingBadgeBorder,
-                        count = pendingTasks.size,
-                        selected = homeTaskFilter == HomeTaskFilter.PENDING,
-                        onClick = { homeTaskFilter = HomeTaskFilter.PENDING }
-                    )
-                    StatusBadge(
-                        text = "completed",
-                        backgroundColor = CompletedBadgeBg,
-                        borderColor = CompletedBadgeBorder,
-                        contentColor = CompletedBadgeBorder,
-                        count = completedTasks.size,
-                        selected = homeTaskFilter == HomeTaskFilter.COMPLETED,
-                        onClick = { homeTaskFilter = HomeTaskFilter.COMPLETED }
-                    )
-                }
-            }
-
-            item { Spacer(Modifier.height(10.dp)) }*/
-
             item {
                 TypeFilterDropdownBadge(
                     selectedCategory = selectedCategory,
@@ -187,7 +187,6 @@ fun HomeScreen(
             item { Spacer(Modifier.height(10.dp)) }
 
             item {
-                // TaskListCard now uses SwipeOffTaskItem internally
                 TaskListCard(
                     tasks = filteredTasks,
                     emptyMessage = if (homeTaskFilter == HomeTaskFilter.PENDING) {
@@ -240,16 +239,14 @@ fun HomeScreen(
             }
         }
 
-        // ── Drawer (extracted to its own composable) ──────────────────────
+        // ── Drawer ──────────────────────
         DrawerMenu(
             isOpen = menuOpen,
             firstName = firstName,
             isDarkTheme = isDarkTheme,
-            isLoggedIn = isLoggedIn,
             paletteIndex    = paletteIndex,
             onClose = { menuOpen = false },
             onToggleDarkMode = onToggleDarkMode,
-            onAuthAction = onAuthAction,
             onStatsClick = onStatsClick,
             onPaletteChange = onPaletteChange
         )
@@ -257,7 +254,6 @@ fun HomeScreen(
 }
 
 // ── TaskListCard ─────────────────────────────────────────────────────────────
-// Uses SwipeOffTaskItem so every row gets the shared animation + sound.
 
 @Composable
 fun TaskListCard(
@@ -298,7 +294,6 @@ fun TaskListCard(
                     val taskIsExpanded = expandedTaskId == task.id
                     val taskHasDescription = task.description.isNotBlank()
 
-                    // ↓ SwipeOffTaskItem wraps each row with animation + sound
                     SwipeOffTaskItem(
                         checked = task.isChecked,
                         onCheckedChange = { onCheckedChange(task) }
@@ -340,7 +335,8 @@ fun TaskListCard(
 @Composable
 fun HomeHeader(
     firstName: String,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onHeaderClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val greeting = remember {
@@ -364,6 +360,7 @@ fun HomeHeader(
                 .clip(RoundedCornerShape(26.dp))
                 .border(1.dp, colorScheme.primary.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
                 .background(colorScheme.surface)
+                .clickable { onHeaderClick() }
         ) {
             Row(
                 modifier = Modifier
@@ -504,4 +501,3 @@ fun QuickAccessCard(
         }
     }
 }
-

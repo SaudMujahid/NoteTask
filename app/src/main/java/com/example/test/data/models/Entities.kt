@@ -5,34 +5,13 @@ import androidx.room.PrimaryKey
 import androidx.room.ForeignKey
 import androidx.room.Index
 
-@Entity(tableName = "users")
-data class User(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val firstName: String,
-    val lastName: String,
-    val email: String,
-    val passwordHash: String
-)
-
-@Entity(
-    tableName = "tasks",
-    foreignKeys = [
-        ForeignKey(
-            entity = User::class,
-            parentColumns = ["id"],
-            childColumns = ["userId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index(value = ["userId"])]
-)
+@Entity(tableName = "tasks")
 data class Task(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val userId: Long,
     val title: String,
     val description: String = "",
     val category: String,
-    val date: String, // Simplified as String for now
+    val date: String,
     val isChecked: Boolean = false,
     val isScheduled: Boolean = false,
     val scheduleStartMinutes: Int? = null,
@@ -59,22 +38,9 @@ data class Subtask(
     val isChecked: Boolean = false
 )
 
-
-@Entity(
-    tableName = "notes",
-    foreignKeys = [
-        ForeignKey(
-            entity = User::class,
-            parentColumns = ["id"],
-            childColumns = ["userId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index(value = ["userId"])]
-)
+@Entity(tableName = "notes")
 data class Note(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val userId: Long = 0,
     val title: String = "",
     val content: String = "",
     val type: String = "NOTE",

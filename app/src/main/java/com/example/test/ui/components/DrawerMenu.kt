@@ -8,14 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Login
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,177 +27,53 @@ fun DrawerMenu(
     isOpen: Boolean,
     firstName: String,
     isDarkTheme: Boolean,
-    isLoggedIn: Boolean,
+    isLoggedIn: Boolean = true,
     paletteIndex: Int = 0,
     onClose: () -> Unit,
     onToggleDarkMode: () -> Unit,
-    onAuthAction: () -> Unit,
+    onAuthAction: () -> Unit = {},
     onStatsClick: () -> Unit = {},
     onPaletteChange: (Int) -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     var showPalettePicker by remember { mutableStateOf(false) }
 
-    // ── Scrim ──────────────────────────────────────────────────────────────
-    AnimatedVisibility(
-        visible = isOpen,
-        enter = fadeIn(),
-        exit  = fadeOut(),
-        modifier = Modifier
-            .fillMaxSize()
-            .zIndex(10f)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
-                .clickable {
-                    showPalettePicker = false
-                    onClose()
-                }
-        )
+    AnimatedVisibility(visible = isOpen, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize().zIndex(10f)) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable { showPalettePicker = false; onClose() })
     }
 
-    // ── Panel ──────────────────────────────────────────────────────────────
-    AnimatedVisibility(
-        visible = isOpen,
-        enter = slideInHorizontally(initialOffsetX = { it }),
-        exit  = slideOutHorizontally(targetOffsetX = { it }),
-        modifier = Modifier
-            .fillMaxSize()
-            .zIndex(11f)
-    ) {
+    AnimatedVisibility(visible = isOpen, enter = slideInHorizontally(initialOffsetX = { it }), exit = slideOutHorizontally(targetOffsetX = { it }), modifier = Modifier.fillMaxSize().zIndex(11f)) {
         Box(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.72f)
-                    .align(Alignment.CenterEnd)
-                    .background(
-                        color = colorScheme.surface,
-                        shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
-                    )
-                    .clickable { /* consume so scrim doesn't fire */ }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(28.dp)
-                ) {
-                    // ── Close button ──────────────────────────────────────
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        IconButton(
-                            onClick = {
-                                showPalettePicker = false
-                                onClose()
-                            },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(colorScheme.onSurface.copy(alpha = 0.1f))
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Close menu",
-                                tint = colorScheme.onSurface
-                            )
+            Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(0.72f).align(Alignment.CenterEnd).background(color = colorScheme.surface, shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)).clickable { }) {
+                Column(modifier = Modifier.fillMaxSize().padding(28.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        IconButton(onClick = { showPalettePicker = false; onClose() }, modifier = Modifier.size(36.dp).clip(CircleShape).background(colorScheme.onSurface.copy(alpha = 0.1f))) {
+                            Icon(Icons.Default.Close, contentDescription = "Close menu", tint = colorScheme.onSurface)
                         }
                     }
 
                     Spacer(Modifier.height(16.dp))
-
-                    // ── Greeting ──────────────────────────────────────────
-                    Text(
-                        text = if (firstName.isBlank()) "Hello!" else "Hi, $firstName 👋",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        color = colorScheme.onSurface
-                    )
-
+                    Text(text = if (firstName.isBlank()) "Hello!" else "Hi, $firstName 👋", fontSize = 22.sp, fontWeight = FontWeight.Black, color = colorScheme.onSurface)
                     Spacer(Modifier.height(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .width(40.dp)
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(colorScheme.primary)
-                    )
-
+                    Box(modifier = Modifier.width(40.dp).height(3.dp).clip(RoundedCornerShape(50)).background(colorScheme.primary))
                     Spacer(Modifier.height(36.dp))
 
-                    // ── Dark / Light toggle ───────────────────────────────
-                    DrawerMenuItem(
-                        label    = if (isDarkTheme) "Light Mode" else "Dark Mode",
-                        icon     = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        iconTint  = Color(0xFFFFD700),
-                        textColor = colorScheme.onSurface,
-                        onClick  = {
-                            onToggleDarkMode()
-                            onClose()
-                        }
-                    )
-
+                    DrawerMenuItem(label = if (isDarkTheme) "Light Mode" else "Dark Mode", icon = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode, iconTint = Color(0xFFFFD700), textColor = colorScheme.onSurface, onClick = { onToggleDarkMode(); onClose() })
                     Spacer(Modifier.height(16.dp))
                     HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Colour scheme picker ──────────────────────────────
-                    DrawerMenuItem(
-                        label     = "Colour Scheme",
-                        icon      = Icons.Default.Palette,
-                        iconTint  = colorScheme.primary,
-                        textColor = colorScheme.onSurface,
-                        onClick   = { showPalettePicker = !showPalettePicker }
-                    )
-
-                    // Inline swatch row — slides in/out
-                    AnimatedVisibility(
-                        visible = showPalettePicker,
-                        enter   = expandVertically() + fadeIn(),
-                        exit    = shrinkVertically() + fadeOut()
-                    ) {
+                    DrawerMenuItem(label = "Colour Scheme", icon = Icons.Default.Palette, iconTint = colorScheme.primary, textColor = colorScheme.onSurface, onClick = { showPalettePicker = !showPalettePicker })
+                    AnimatedVisibility(visible = showPalettePicker, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                         Column {
                             Spacer(Modifier.height(14.dp))
-                            Text(
-                                "Pick a palette",
-                                fontSize = 11.sp,
-                                color = colorScheme.onSurface.copy(alpha = 0.45f),
-                                modifier = Modifier.padding(start = 4.dp)
-                            )
+                            Text("Pick a palette", fontSize = 11.sp, color = colorScheme.onSurface.copy(alpha = 0.45f), modifier = Modifier.padding(start = 4.dp))
                             Spacer(Modifier.height(10.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(start = 4.dp)
-                            ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(start = 4.dp)) {
                                 AppPalettes.forEachIndexed { index, palette ->
                                     val selected = index == paletteIndex
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier
-                                            .size(30.dp)
-                                            .clip(CircleShape)
-                                            .background(palette.swatch)
-                                            .then(
-                                                if (selected) Modifier.border(
-                                                    2.5.dp,
-                                                    colorScheme.onSurface,
-                                                    CircleShape
-                                                ) else Modifier
-                                            )
-                                            .clickable { onPaletteChange(index) }
-                                    ) {
-                                        if (selected) {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                        }
+                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(30.dp).clip(CircleShape).background(palette.swatch).then(if (selected) Modifier.border(2.5.dp, colorScheme.onSurface, CircleShape) else Modifier).clickable { onPaletteChange(index) }) {
+                                        if (selected) Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                                     }
                                 }
                             }
@@ -216,87 +85,21 @@ fun DrawerMenu(
                     HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Progress ──────────────────────────────────────────
-                    DrawerMenuItem(
-                        icon      = Icons.Default.BarChart,
-                        label     = "Progress",
-                        iconTint  = colorScheme.primary,
-                        textColor = colorScheme.onSurface,
-                        onClick   = {
-                            onClose()
-                            onStatsClick()
-                        }
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
-                    Spacer(Modifier.height(16.dp))
-
-                    // ── Login / Logout ────────────────────────────────────
-                    DrawerMenuItem(
-                        label     = if (isLoggedIn) "Log Out" else "Log In",
-                        icon      = if (isLoggedIn) Icons.Default.Logout else Icons.Default.Login,
-                        iconTint  = if (isLoggedIn) colorScheme.error else colorScheme.primary,
-                        textColor = if (isLoggedIn) colorScheme.error else colorScheme.primary,
-                        onClick   = {
-                            onClose()
-                            onAuthAction()
-                        }
-                    )
-
+                    DrawerMenuItem(icon = Icons.Default.BarChart, label = "Progress", iconTint = colorScheme.primary, textColor = colorScheme.onSurface, onClick = { onClose(); onStatsClick() })
                     Spacer(Modifier.weight(1f))
-
-                    Text(
-                        "v1.0.0",
-                        fontSize = 11.sp,
-                        color = colorScheme.onSurface.copy(alpha = 0.3f)
-                    )
+                    Text("v1.0.0", fontSize = 11.sp, color = colorScheme.onSurface.copy(alpha = 0.3f))
                 }
             }
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reusable menu row
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
-fun DrawerMenuItem(
-    label: String,
-    icon: ImageVector,
-    iconTint: Color,
-    textColor: Color,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(iconTint.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint     = iconTint,
-                modifier = Modifier.size(20.dp)
-            )
+fun DrawerMenuItem(label: String, icon: ImageVector, iconTint: Color, textColor: Color, onClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 10.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconTint.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
         }
-        Text(
-            label,
-            fontSize   = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color      = textColor
-        )
+        Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = textColor)
     }
 }

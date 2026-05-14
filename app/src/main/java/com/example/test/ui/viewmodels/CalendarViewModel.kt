@@ -60,11 +60,8 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
 
     init {
         generateWeekDates()
-    }
-
-    fun setUser(userId: Long) {
         viewModelScope.launch {
-            taskRepository.getTasksForUser(userId).collect { taskList ->
+            taskRepository.getAllTasks().collect { taskList ->
                 _allTasks.value = taskList
                 generateCalendarDays()
                 updateTasksForSelectedDate()

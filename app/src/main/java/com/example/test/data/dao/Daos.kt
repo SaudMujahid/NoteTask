@@ -5,18 +5,6 @@ import com.example.test.data.models.*
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface UserDao {
-    @Insert
-    suspend fun insert(user: User): Long
-
-    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
-    suspend fun getUserByEmail(email: String): User?
-
-    @Query("SELECT * FROM users WHERE id = :id LIMIT 1")
-    fun getUserById(id: Long): Flow<User?>
-}
-
-@Dao
 interface TaskDao {
     @Insert
     suspend fun insertTask(task: Task): Long
@@ -26,9 +14,6 @@ interface TaskDao {
 
     @Delete
     suspend fun deleteTask(task: Task)
-
-    @Query("SELECT * FROM tasks WHERE userId = :userId ORDER BY id DESC")
-    fun getTasksForUser(userId: Long): Flow<List<Task>>
 
     @Query("SELECT * FROM tasks ORDER BY id DESC")
     fun getAllTasks(): Flow<List<Task>>
@@ -57,14 +42,13 @@ interface NoteDao {
     @Delete
     suspend fun delete(note: Note)
 
-    @Query("SELECT * FROM notes WHERE userId = :userId ORDER BY isPinned DESC, dateModified DESC")
-    fun getNotesForUser(userId: Long): Flow<List<Note>>
-
+    @Query("SELECT * FROM notes ORDER BY isPinned DESC, dateModified DESC")
+    fun getAllNotes(): Flow<List<Note>>
 
     @Query("""
-        SELECT * FROM notes WHERE userId = :userId 
-        AND (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%')
+        SELECT * FROM notes 
+        WHERE (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%')
         ORDER BY isPinned DESC, dateModified DESC
     """)
-    fun searchNotes(userId: Long, query: String): Flow<List<Note>>
+    fun searchNotes(query: String): Flow<List<Note>>
 }

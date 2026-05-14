@@ -14,20 +14,19 @@ import org.json.JSONObject
 @OptIn(ExperimentalCoroutinesApi::class)
 class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
 
-    private val _userId = MutableStateFlow(0L)
     private val _searchQuery = MutableStateFlow("")
     private val _filterType = MutableStateFlow("ALL")
 
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     val filterType: StateFlow<String> = _filterType.asStateFlow()
 
-    val notes: StateFlow<List<Note>> = combine(_userId, _searchQuery, _filterType) { u, q, f ->
-        Triple(u, q, f)
-    }.flatMapLatest { (userId, query, filter) ->
+    val notes: StateFlow<List<Note>> = combine(_searchQuery, _filterType) { q, f ->
+        Pair(q, f)
+    }.flatMapLatest { (query, filter) ->
         val flow = if (query.isEmpty()) {
-            repository.getNotesForUser(userId)
+            repository.getAllNotes()
         } else {
-            repository.searchNotes(userId, query)
+            repository.searchNotes(query)
         }
 
         flow.map { list ->
@@ -35,7 +34,6 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun setUser(id: Long) { _userId.value = id }
     fun setSearchQuery(q: String) { _searchQuery.value = q }
     fun setFilterType(t: String) { _filterType.value = t }
 

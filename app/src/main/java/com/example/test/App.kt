@@ -12,7 +12,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.example.test.data.repository.TaskRepository
-import com.example.test.data.repository.UserRepository
 import com.example.test.data.repository.NoteRepository
 import com.example.test.ui.screens.*
 import com.example.test.ui.theme.TestTheme
@@ -20,27 +19,17 @@ import com.example.test.ui.viewmodels.*
 
 @Composable
 fun MyApp(
-    userRepository: UserRepository,
     taskRepository: TaskRepository,
     noteRepository: NoteRepository
 ) {
     var isDarkTheme  by remember { mutableStateOf(false) }
     var paletteIndex by remember { mutableStateOf(0) }
+    var userName by remember { mutableStateOf("User") }
 
     val navController = rememberNavController()
-    val authViewModel: AuthViewModel = viewModel(factory = ViewModelFactory(userRepository))
     val taskViewModel: TaskViewModel = viewModel(factory = ViewModelFactory(taskRepository))
     val calendarViewModel: CalendarViewModel = viewModel(factory = ViewModelFactory(taskRepository))
     val noteViewModel: NoteViewModel = viewModel(factory = ViewModelFactory(noteRepository))
-    val currentUser by authViewModel.currentUser.collectAsState()
-
-    LaunchedEffect(currentUser) {
-        currentUser?.let { user ->
-            taskViewModel.setUser(user.id)
-            noteViewModel.setUser(user.id)
-            calendarViewModel.setUser(user.id)
-        }
-    }
 
     TestTheme(
         darkTheme = isDarkTheme,
@@ -53,70 +42,28 @@ fun MyApp(
                 modifier = Modifier.padding(innerPadding)
             ) {
 
-                composable("signup") {
-                    SignUpScreen(
-                        isDarkTheme = isDarkTheme,
-                        onToggleDarkMode = { isDarkTheme = !isDarkTheme },
-                        authViewModel = authViewModel,
-                        onSignUpClick = {
-                            navController.navigate("home") {
-                                popUpTo("signup") { inclusive = true }
-                            }
-                        },
-                        onLoginClick = { navController.navigate("login") }
-                    )
-                }
-
                 composable("stats") {
                     StatsScreen(
                         taskViewModel = taskViewModel,
-                        userId = currentUser?.id,
                         onBack = { navController.popBackStack() }
-                    )
-                }
-
-                    composable("login") {
-                    LoginScreen(
-                        isDarkTheme = isDarkTheme,
-                        onToggleDarkMode = { isDarkTheme = !isDarkTheme },
-                        authViewModel = authViewModel,
-                        onLoginClick = {
-                            navController.navigate("home") {
-                                popUpTo("login") { inclusive = true }
-                            }
-                        },
-                        onSignUpClick = { navController.navigate("signup") }
                     )
                 }
 
                 composable("home") {
                     HomeScreen(
                         taskViewModel = taskViewModel,
-                        userId = currentUser?.id,
-                        firstName = currentUser?.firstName ?: "",
+                        firstName = userName,
                         isDarkTheme = isDarkTheme,
-                        isLoggedIn = currentUser != null,
                         paletteIndex    = paletteIndex,
                         onToggleDarkMode = { isDarkTheme = !isDarkTheme },
-                        onAuthAction = {
-                            if (currentUser != null) {
-                                authViewModel.logout()
-                                navController.navigate("login") {
-                                    popUpTo("home") { inclusive = true }
-                                }
-                            } else {
-                                navController.navigate("login")
-                            }
-                        },
-                        onAddClick = {
-                            if (currentUser != null) navController.navigate("add_task")
-                            else navController.navigate("login")
-                        },
+                        onAddClick = { navController.navigate("add_task") },
                         onCalendarClick = { navController.navigate("calendar") },
                         onNotesClick    = { navController.navigate("notes") },
                         onTasksClick    = { navController.navigate("today_tasks") },
-                        onStatsClick = { navController.navigate("stats") }
-                    ) { paletteIndex = it }
+                        onStatsClick = { navController.navigate("stats") },
+                        onPaletteChange = { paletteIndex = it },
+                        onNameChange = { userName = it }
+                    )
                 }
 
                 composable("today_tasks") {
@@ -136,14 +83,11 @@ fun MyApp(
                     )
                 ) { backStackEntry ->
                     val dateMillis = backStackEntry.arguments?.getLong("dateMillis") ?: -1L
-                    currentUser?.let { user ->
-                        AddTaskScreen(
-                            userId = user.id,
-                            taskViewModel = taskViewModel,
-                            onClose = { navController.popBackStack() },
-                            initialDateMillis = if (dateMillis > 0) dateMillis else null
-                        )
-                    }
+                    AddTaskScreen(
+                        taskViewModel = taskViewModel,
+                        onClose = { navController.popBackStack() },
+                        initialDateMillis = if (dateMillis > 0) dateMillis else null
+                    )
                 }
 
                 composable("calendar") {
@@ -151,18 +95,15 @@ fun MyApp(
                         viewModel = calendarViewModel,
                         onNavigateHome = { navController.popBackStack("home", false) },
                         onAddTaskClick = {
-                            if (currentUser != null) {
-                                val selectedDate = calendarViewModel.selectedDate.value
-                                val dateMillis = selectedDate.time
-                                navController.navigate("add_task?dateMillis=$dateMillis")
-                            } else navController.navigate("login")
+                            val selectedDate = calendarViewModel.selectedDate.value
+                            val dateMillis = selectedDate.time
+                            navController.navigate("add_task?dateMillis=$dateMillis")
                         }
                     )
                 }
 
                 composable("notes") {
                     NotesScreen(
-                        userId = currentUser?.id ?: 0L,
                         noteViewModel = noteViewModel,
                         onNoteClick = { noteId ->
                             navController.navigate("note_editor/$noteId/NOTE")
@@ -179,7 +120,6 @@ fun MyApp(
                     NoteEditorScreen(
                         noteId = noteId,
                         noteType = noteType,
-                        userId = currentUser?.id ?: 0L,
                         noteViewModel = noteViewModel,
                         onBack = { navController.popBackStack() }
                     )
