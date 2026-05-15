@@ -29,6 +29,15 @@ interface TaskDao {
 
     @Query("UPDATE tasks SET isChecked = :isChecked WHERE id = :taskId")
     suspend fun updateTaskChecked(taskId: Long, isChecked: Boolean)
+
+    @Query("SELECT * FROM subtasks")
+	suspend fun getAllSubtasks(): List<Subtask>
+
+	@Query("DELETE FROM tasks")
+	suspend fun deleteAllTasks()
+
+	@Query("DELETE FROM subtasks")
+	suspend fun deleteAllSubtasks()
 }
 
 @Dao
@@ -44,6 +53,10 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes ORDER BY isPinned DESC, dateModified DESC")
     fun getAllNotes(): Flow<List<Note>>
+	
+
+    @Query("DELETE FROM notes")
+suspend fun deleteAllNotes()
 
     @Query("""
         SELECT * FROM notes 

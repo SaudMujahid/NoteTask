@@ -31,6 +31,7 @@ fun DrawerMenu(
     paletteIndex: Int = 0,
     onClose: () -> Unit,
     onToggleDarkMode: () -> Unit,
+onTransferClick: () -> Unit = {},
     onAuthAction: () -> Unit = {},
     onStatsClick: () -> Unit = {},
     onPaletteChange: (Int) -> Unit = {}
@@ -85,7 +86,11 @@ fun DrawerMenu(
                     HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
                     Spacer(Modifier.height(16.dp))
 
-                    DrawerMenuItem(icon = Icons.Default.BarChart, label = "Progress", iconTint = colorScheme.primary, textColor = colorScheme.onSurface, onClick = { onClose(); onStatsClick() })
+             DrawerMenuItem(icon = Icons.Default.BarChart, label = "Progress", iconTint = colorScheme.primary, textColor = colorScheme.onSurface, onClick = { onClose(); onStatsClick() })
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.3f))
+                    Spacer(Modifier.height(16.dp))
+                    DrawerMenuItem(icon = Icons.Default.SwapHoriz, label = "Transfer", iconTint = colorScheme.primary, textColor = colorScheme.onSurface, onClick = { onClose(); onTransferClick() })
                     Spacer(Modifier.weight(1f))
                     Text("v1.0.0", fontSize = 11.sp, color = colorScheme.onSurface.copy(alpha = 0.3f))
                 }

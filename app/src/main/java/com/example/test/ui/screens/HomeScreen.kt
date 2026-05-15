@@ -21,13 +21,17 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.test.data.AppDatabase
+import com.example.test.data.DataTransferManager
 import com.example.test.data.models.Task
 import com.example.test.ui.components.DrawerMenu
 import com.example.test.ui.components.SwipeOffTaskItem
 import com.example.test.ui.components.TaskItem
+import com.example.test.ui.components.TransferSheet
 import com.example.test.ui.theme.*
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
@@ -57,6 +61,24 @@ fun HomeScreen(
     val colorScheme = MaterialTheme.colorScheme
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
 
+    val context = LocalContext.current
+val transferManager = remember {
+    val db = AppDatabase.getDatabase(context)
+    DataTransferManager(db.taskDao(), db.noteDao())
+}
+var showTransferSheet by remember { mutableStateOf(false) }
+
+if (showTransferSheet) {
+    TransferSheet(
+        transferManager = transferManager,
+        userName = firstName,
+        onDismiss = { showTransferSheet = false },
+        onRestored = { restoredName ->
+            onNameChange(restoredName)
+            showTransferSheet = false
+        }
+    )
+}
     val todayTasks = remember(tasks, today) { tasks.filter { it.date == today } }
     val availableCategories = remember {
         TaskCategoryFilter.entries
@@ -248,7 +270,8 @@ fun HomeScreen(
             onClose = { menuOpen = false },
             onToggleDarkMode = onToggleDarkMode,
             onStatsClick = onStatsClick,
-            onPaletteChange = onPaletteChange
+            onPaletteChange = onPaletteChange,
+	    onTransferClick = { showTransferSheet = true }
         )
     }
 }
