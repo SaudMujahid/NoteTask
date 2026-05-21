@@ -5,20 +5,28 @@ import androidx.lifecycle.viewModelScope
 import com.example.test.data.models.ListItem
 import com.example.test.data.models.Note
 import com.example.test.data.repository.NoteRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
+sealed interface NoteSaveEvent {
+    data class Success(val noteId: Long) : NoteSaveEvent
+    data class Error(val message: String) : NoteSaveEvent
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     private val _filterType = MutableStateFlow("ALL")
+    private val _saveEvents = MutableSharedFlow<NoteSaveEvent>(extraBufferCapacity = 1)
 
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     val filterType: StateFlow<String> = _filterType.asStateFlow()
+    val saveEvents: SharedFlow<NoteSaveEvent> = _saveEvents.asSharedFlow()
 
     val notes: StateFlow<List<Note>> = combine(_searchQuery, _filterType) { q, f ->
         Pair(q, f)
@@ -37,12 +45,22 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
     fun setSearchQuery(q: String) { _searchQuery.value = q }
     fun setFilterType(t: String) { _filterType.value = t }
 
-    fun addNote(note: Note) = viewModelScope.launch {
-        repository.insert(note)
+    fun addNote(note: Note): Job = viewModelScope.launch {
+        try {
+            val insertedId = repository.insert(note)
+            _saveEvents.emit(NoteSaveEvent.Success(insertedId))
+        } catch (e: Exception) {
+            _saveEvents.emit(NoteSaveEvent.Error(e.message ?: "Failed to save note"))
+        }
     }
 
-    fun updateNote(note: Note) = viewModelScope.launch {
-        repository.updateNote(note.copy(dateModified = System.currentTimeMillis()))
+    fun updateNote(note: Note): Job = viewModelScope.launch {
+        try {
+            repository.updateNote(note.copy(dateModified = System.currentTimeMillis()))
+            _saveEvents.emit(NoteSaveEvent.Success(note.id))
+        } catch (e: Exception) {
+            _saveEvents.emit(NoteSaveEvent.Error(e.message ?: "Failed to save note"))
+        }
     }
 
     fun deleteNote(note: Note) = viewModelScope.launch {

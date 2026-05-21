@@ -15,8 +15,8 @@ class NoteRepository(private val noteDao: NoteDao) {
         noteDao.delete(note)
     }
 
-    suspend fun insert(note: Note) {
-        noteDao.insert(note)
+    suspend fun insert(note: Note): Long {
+        return noteDao.insert(note)
     }
 
     fun searchNotes(query: String): Flow<List<Note>> {
