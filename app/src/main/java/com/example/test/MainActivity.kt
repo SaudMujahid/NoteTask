@@ -13,13 +13,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.example.test.data.AppDatabase
 import com.example.test.data.repository.NoteRepository
 import com.example.test.data.repository.TaskRepository
 import com.example.test.notification.NotificationObserver
 import com.example.test.notification.TaskEventBus
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private lateinit var notificationObserver: NotificationObserver
 

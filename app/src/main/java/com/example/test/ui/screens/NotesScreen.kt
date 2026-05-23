@@ -14,10 +14,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.platform.LocalContext
 import com.example.test.data.models.Note
 import com.example.test.ui.viewmodels.NoteViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.test.data.repository.ProfileRepository
 
 val NoteColorMap = mapOf(
     "DEFAULT" to Color.Transparent,
@@ -44,6 +46,21 @@ fun NotesScreen(
     var showSearch by remember { mutableStateOf(false) }
     var showFabMenu by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
+    var lockedNoteId by remember { mutableStateOf<Long?>(null) }
+    val context = LocalContext.current
+    val profileRepo = remember { ProfileRepository.getInstance(context) }
+
+    if (lockedNoteId != null) {
+        NoteAuthDialog(
+            profileRepository = profileRepo,
+            onDismiss = { lockedNoteId = null },
+            onSuccess = {
+                val id = lockedNoteId!!
+                lockedNoteId = null
+                onNoteClick(id)
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -88,17 +105,41 @@ fun NotesScreen(
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 listOf("All" to "ALL", "Notes" to "NOTE", "Journal" to "JOURNAL", "Lists" to "LIST").forEach { (label, type) ->
                     FilterChip(selected = filterType == type, onClick = { noteViewModel.setFilterType(type) }, label = { Text(label) })
                 }
             }
             if (notes.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No notes yet. Tap + to create one.") }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No notes yet. Tap + to create one.")
+                }
             } else {
-                LazyVerticalStaggeredGrid(columns = StaggeredGridCells.Fixed(2), modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalItemSpacing = 8.dp, contentPadding = PaddingValues(bottom = 80.dp, top = 8.dp)) {
+                LazyVerticalStaggeredGrid(
+                    columns = StaggeredGridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalItemSpacing = 8.dp,
+                    contentPadding = PaddingValues(bottom = 80.dp, top = 8.dp)
+                ) {
                     items(notes.size) { index ->
-                        NoteCard(note = notes[index], onClick = { onNoteClick(notes[index].id) }, onPin = { noteViewModel.togglePin(notes[index]) })
+                        NoteCard(
+                            note = notes[index],
+                            onClick = {
+                                if (notes[index].isLocked) {
+                                    lockedNoteId = notes[index].id
+                                } else {
+                                    onNoteClick(notes[index].id)
+                                }
+                            },
+                            onPin = { noteViewModel.togglePin(notes[index]) }
+                        )
                     }
                 }
             }
@@ -123,9 +164,22 @@ private fun NoteCard(note: Note, onClick: () -> Unit, onPin: () -> Unit) {
     val bgColor = if (note.color != "DEFAULT") NoteColorMap[note.color] ?: colorScheme.surface else colorScheme.surface
     val dateStr = SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(note.dateModified))
     val typeEmoji = when (note.type) { "JOURNAL" -> "📔"; "LIST" -> "✅"; else -> "📝" }
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = bgColor)) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor)
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                if (note.isLocked) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Locked",
+                        modifier = Modifier.size(14.dp),
+                        tint = colorScheme.error
+                    )
+                }
                 Text(typeEmoji, fontSize = 14.sp)
                 if (note.isPinned) Icon(Icons.Default.PushPin, null, modifier = Modifier.size(14.dp), tint = colorScheme.primary)
             }

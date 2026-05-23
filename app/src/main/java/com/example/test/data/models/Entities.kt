@@ -50,5 +50,6 @@ data class Note(
     val stickers: String = "",
     val dateCreated: Long = System.currentTimeMillis(),
     val dateModified: Long = System.currentTimeMillis(),
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val isLocked: Boolean = false
 )

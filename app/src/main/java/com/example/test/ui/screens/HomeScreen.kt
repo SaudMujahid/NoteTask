@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.example.test.data.AppDatabase
 import com.example.test.data.DataTransferManager
 import com.example.test.data.models.Task
+import com.example.test.data.repository.ProfileRepository
 import com.example.test.ui.components.DrawerMenu
 import com.example.test.ui.components.SwipeOffTaskItem
 import com.example.test.ui.components.TaskItem
@@ -45,7 +46,6 @@ private enum class HomeTaskFilter {
 @Composable
 fun HomeScreen(
     taskViewModel: TaskViewModel,
-    firstName: String = "User",
     isDarkTheme: Boolean = false,
     paletteIndex: Int = 0,
     onToggleDarkMode: () -> Unit = {},
@@ -55,31 +55,36 @@ fun HomeScreen(
     onTasksClick: () -> Unit = {},
     onStatsClick: () -> Unit = {},
     onPaletteChange: (Int) -> Unit = {},
-    onNameChange: (String) -> Unit = {}
+    onProfileClick: () -> Unit = {}
 ) {
-    val tasks by taskViewModel.tasks.collectAsState()
+    val context = LocalContext.current
+    val taskState by taskViewModel.tasks.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
 
-    val context = LocalContext.current
-val transferManager = remember {
-    val db = AppDatabase.getDatabase(context)
-    DataTransferManager(db.taskDao(), db.noteDao())
-}
-var showTransferSheet by remember { mutableStateOf(false) }
+    val profileRepository = remember { ProfileRepository.getInstance(context) }
+    val profile by profileRepository.profileFlow.collectAsState()
+    val firstName = profile.firstName
 
-if (showTransferSheet) {
-    TransferSheet(
-        transferManager = transferManager,
-        userName = firstName,
-        onDismiss = { showTransferSheet = false },
-        onRestored = { restoredName ->
-            onNameChange(restoredName)
-            showTransferSheet = false
-        }
-    )
-}
-    val todayTasks = remember(tasks, today) { tasks.filter { it.date == today } }
+    val transferManager = remember {
+        val db = AppDatabase.getDatabase(context)
+        DataTransferManager(db.taskDao(), db.noteDao())
+    }
+    var showTransferSheet by remember { mutableStateOf(false) }
+
+    if (showTransferSheet) {
+        TransferSheet(
+            transferManager = transferManager,
+            userName = firstName,
+            onDismiss = { showTransferSheet = false },
+            onRestored = { restoredName ->
+                profileRepository.saveProfile(profile.copy(firstName = restoredName))
+                showTransferSheet = false
+            }
+        )
+    }
+
+    val todayTasks = remember(taskState, today) { taskState.filter { it.date == today } }
     val availableCategories = remember {
         TaskCategoryFilter.entries
             .filter { it != TaskCategoryFilter.ALL }
@@ -99,32 +104,6 @@ if (showTransferSheet) {
         statusFilteredTasks.filter { TaskCategoryFilter.fromTaskCategory(it.category) == selectedCategory }
     }
     var menuOpen by remember { mutableStateOf(false) }
-    var showNameDialog by remember { mutableStateOf(false) }
-
-    if (showNameDialog) {
-        var tempName by remember { mutableStateOf(firstName) }
-        AlertDialog(
-            onDismissRequest = { showNameDialog = false },
-            title = { Text("Change Name") },
-            text = {
-                OutlinedTextField(
-                    value = tempName,
-                    onValueChange = { tempName = it },
-                    label = { Text("Your Name") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onNameChange(tempName)
-                    showNameDialog = false
-                }) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showNameDialog = false }) { Text("Cancel") }
-            }
-        )
-    }
 
     Box(
         modifier = Modifier
@@ -146,7 +125,6 @@ if (showTransferSheet) {
                 HomeHeader(
                     firstName = firstName,
                     onMenuClick = { menuOpen = true },
-                    onHeaderClick = { showNameDialog = true }
                 )
             }
             item { Spacer(Modifier.height(20.dp)) }
@@ -271,7 +249,8 @@ if (showTransferSheet) {
             onToggleDarkMode = onToggleDarkMode,
             onStatsClick = onStatsClick,
             onPaletteChange = onPaletteChange,
-	    onTransferClick = { showTransferSheet = true }
+            onTransferClick = { showTransferSheet = true },
+            onProfileClick = onProfileClick
         )
     }
 }
@@ -359,7 +338,6 @@ fun TaskListCard(
 fun HomeHeader(
     firstName: String,
     onMenuClick: () -> Unit,
-    onHeaderClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val greeting = remember {
@@ -383,7 +361,6 @@ fun HomeHeader(
                 .clip(RoundedCornerShape(26.dp))
                 .border(1.dp, colorScheme.primary.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
                 .background(colorScheme.surface)
-                .clickable { onHeaderClick() }
         ) {
             Row(
                 modifier = Modifier

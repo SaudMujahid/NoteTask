@@ -71,6 +71,10 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
         repository.updateNote(note.copy(isPinned = !note.isPinned))
     }
 
+    fun toggleLock(note: Note) = viewModelScope.launch {
+        repository.updateNote(note.copy(isLocked = !note.isLocked, dateModified = System.currentTimeMillis()))
+    }
+
     fun parseListItems(json: String): List<ListItem> = try {
         val arr = JSONArray(json)
         (0 until arr.length()).map { i ->

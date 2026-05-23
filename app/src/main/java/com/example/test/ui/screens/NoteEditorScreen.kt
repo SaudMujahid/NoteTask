@@ -58,6 +58,7 @@ fun NoteEditorScreen(
     var content by remember { mutableStateOf(existingNote?.content ?: "") }
     var color by remember { mutableStateOf(existingNote?.color ?: "DEFAULT") }
     var isPinned by remember { mutableStateOf(existingNote?.isPinned ?: false) }
+    var isLocked by remember { mutableStateOf(existingNote?.isLocked ?: false) }
     var listItems by remember {
         mutableStateOf(
             if (existingNote != null) noteViewModel.parseListItems(existingNote.listItemsJson)
@@ -109,7 +110,8 @@ fun NoteEditorScreen(
             listItemsJson = noteViewModel.serializeListItems(listItems),
             photoUris = photoUris.joinToString(","),
             stickers = stickers.joinToString(","),
-            isPinned = isPinned
+            isPinned = isPinned,
+            isLocked = isLocked
         )
         if (noteId == -1L) noteViewModel.addNote(note)
         else noteViewModel.updateNote(note)
@@ -183,11 +185,18 @@ fun NoteEditorScreen(
                             tint = if (isSaved || isSaving) colorScheme.primary else onBgColor
                         )
                     }
-                    IconButton(onClick = { isPinned = !isPinned; isSaved = false }) {
+                    IconButton(onClick = { isPinned = !isPinned; markUnsaved() }) {
                         Icon(
                             Icons.Default.PushPin,
                             null,
                             tint = if (isPinned) colorScheme.primary else onBgVariant
+                        )
+                    }
+                    IconButton(onClick = { isLocked = !isLocked; markUnsaved() }) {
+                        Icon(
+                            if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                            null,
+                            tint = if (isLocked) colorScheme.error else onBgVariant
                         )
                     }
                     IconButton(onClick = { showColorPicker = !showColorPicker }) {

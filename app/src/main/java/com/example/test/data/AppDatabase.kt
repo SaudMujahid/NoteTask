@@ -7,9 +7,8 @@ import androidx.room.RoomDatabase
 import com.example.test.data.dao.*
 import com.example.test.data.models.*
 
-@Database(entities = [Task::class, Subtask::class, Note::class], version = 4, exportSchema = false)
+@Database(entities = [Task::class, Subtask::class, Note::class], version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
-
     abstract fun taskDao(): TaskDao
     abstract fun noteDao(): NoteDao
 
@@ -23,7 +22,10 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "app_database"
-                ).fallbackToDestructiveMigration(true).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
+
                 INSTANCE = instance
                 instance
             }
