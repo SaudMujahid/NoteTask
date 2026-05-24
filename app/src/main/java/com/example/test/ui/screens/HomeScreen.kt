@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.test.data.AppDatabase
@@ -122,6 +123,7 @@ fun HomeScreen(
                 HomeHeader(
                     firstName = firstName,
                     onMenuClick = { menuOpen = true },
+                    isDarkTheme = isDarkTheme
                 )
             }
             item { Spacer(Modifier.height(20.dp)) }
@@ -174,10 +176,7 @@ fun HomeScreen(
                 TypeFilterDropdownBadge(
                     selectedCategory = selectedCategory,
                     categories = availableCategories,
-                    onCategorySelected = { selectedCategory = it },
-                    badgeBackgroundColor = FilterBadgeBg,
-                    badgeBorderColor = FilterBadgeBorder,
-                    badgeContentColor = BorderBlue
+                    onCategorySelected = { selectedCategory = it }
                 )
             }
 
@@ -199,7 +198,8 @@ fun HomeScreen(
                             "No completed $selectedCategory tasks for today."
                         }
                     },
-                    onCheckedChange = { task -> taskViewModel.toggleTask(task) }
+                    onCheckedChange = { task -> taskViewModel.toggleTask(task) },
+                    isDarkTheme = isDarkTheme
                 )
             }
             item { Spacer(Modifier.height(20.dp)) }
@@ -217,15 +217,16 @@ fun HomeScreen(
                     .height(65.dp)
                     .padding(top = 10.dp)
                     .background(
-                        color = colorScheme.primary,
+                        color = if (isDarkTheme) colorScheme.primaryContainer
+                        else colorScheme.primary,
                         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
                     )
             )
             LargeFloatingActionButton(
                 onClick = onAddClick,
                 shape = CircleShape,
-                containerColor = Color.White,
-                contentColor = colorScheme.primary,
+                containerColor = if (isDarkTheme) colorScheme.primary else Color.White,
+                contentColor   = if (isDarkTheme) colorScheme.onPrimary else colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = (-15).dp)
@@ -259,7 +260,8 @@ fun TaskListCard(
     tasks: List<Task>,
     onCheckedChange: (Task) -> Unit,
     emptyMessage: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDarkTheme: Boolean = false
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -268,11 +270,15 @@ fun TaskListCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(3.dp, RoundedCornerShape(22.dp)),
+            .then(if (!isDarkTheme) Modifier.shadow(3.dp, RoundedCornerShape(22.dp)) else Modifier),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(4.dp),
-        border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.14f))
+        border = BorderStroke(
+            1.dp,
+            // stronger border in dark compensates for the missing shadow
+            colorScheme.primary.copy(alpha = if (isDarkTheme) 0.30f else 0.14f)
+        )
     ) {
         Column {
             if (tasks.isEmpty()) {
@@ -335,6 +341,7 @@ fun TaskListCard(
 fun HomeHeader(
     firstName: String,
     onMenuClick: () -> Unit,
+    isDarkTheme: Boolean = false
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val greeting = remember {
@@ -351,6 +358,7 @@ fun HomeHeader(
     val displayName = if (firstName.isBlank()) "there" else firstName
 
     Column {
+        // ── Card with greeting text ───────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -390,6 +398,8 @@ fun HomeHeader(
         }
 
         Spacer(Modifier.height(8.dp))
+
+        // ── Accent gradient bar ───────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -398,8 +408,8 @@ fun HomeHeader(
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            colorScheme.primary,
-                            colorScheme.primary.copy(alpha = 0.45f)
+                            colorScheme.primary.copy(alpha = if (isDarkTheme) 0.6f else 1f),
+                            colorScheme.primary.copy(alpha = if (isDarkTheme) 0.2f else 0.45f)
                         )
                     )
                 )
@@ -447,14 +457,14 @@ fun QuickAccessRow(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         QuickAccessCard(
             title = "Notes",
             subtitle = "Tap to open",
             icon = Icons.Default.Add,
-            backgroundColor = colorScheme.primary,
-            contentColor = colorScheme.onPrimary,
+            backgroundColor = colorScheme.primaryContainer,
+            contentColor = colorScheme.onPrimaryContainer,
             modifier = Modifier.weight(1f),
             onClick = onNotesClick
         )
@@ -462,8 +472,8 @@ fun QuickAccessRow(
             title = "Calendar",
             subtitle = "View schedule",
             icon = Icons.Default.CalendarMonth,
-            backgroundColor = colorScheme.secondary,
-            contentColor = colorScheme.onSecondary,
+            backgroundColor = colorScheme.secondaryContainer,
+            contentColor = colorScheme.onSecondaryContainer,
             modifier = Modifier.weight(1f),
             onClick = onCalendarClick
         )
@@ -482,18 +492,40 @@ fun QuickAccessCard(
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(110.dp),
+        modifier = modifier.height(120.dp),
         shape = RoundedCornerShape(20.dp),
         color = backgroundColor
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(icon, null, tint = contentColor, modifier = Modifier.size(28.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(28.dp)
+            )
             Column {
-                Text(title, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 16.sp)
-                Text(subtitle, color = contentColor.copy(alpha = 0.8f), fontSize = 12.sp)
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    color = contentColor,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 16.sp
+                )
             }
         }
     }

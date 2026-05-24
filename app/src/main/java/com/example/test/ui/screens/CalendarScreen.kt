@@ -181,8 +181,8 @@ fun CalendarScreen(
                 if (viewMode != CalendarViewMode.YEAR) {
                     FloatingActionButton(
                         onClick = onAddTaskClick,
-                        containerColor = BorderBlue, 
-                        contentColor = Color.White
+                        containerColor = colorScheme.primary,
+                        contentColor = colorScheme.onPrimary
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -501,7 +501,7 @@ fun MonthView(viewModel: CalendarViewModel) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 8.dp),
                             thickness = 1.dp,
-                            color = BorderBlue.copy(alpha = 0.7f)
+                            color = colorScheme.outline.copy(alpha = 0.5f)
                         )
                     }
                 }
@@ -915,9 +915,6 @@ fun CollapsibleTaskCard(
                                 selectedCategory = selectedCategory,
                                 categories = availableCategories,
                                 onCategorySelected = { selectedCategory = it },
-                                badgeBackgroundColor = FilterBadgeBg,
-                                badgeBorderColor = FilterBadgeBorder,
-                                badgeContentColor = BorderBlue
                             )
                         }
                     }
@@ -1026,18 +1023,17 @@ fun TypeFilterDropdownBadge(
     selectedCategory: String,
     categories: List<String>,
     onCategorySelected: (String) -> Unit,
-    badgeBackgroundColor: Color = FilterBadgeBg,
-    badgeBorderColor: Color = FilterBadgeBorder,
-    badgeContentColor: Color = BorderBlue
+    modifier: Modifier = Modifier          // ← color params removed
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     var expanded by remember { mutableStateOf(false) }
 
-    Box {
+    Box(modifier = modifier) {
         Surface(
             modifier = Modifier.clickable { expanded = true },
-            color = badgeBackgroundColor,
+            color = colorScheme.surfaceVariant,
             shape = RoundedCornerShape(999.dp),
-            border = BorderStroke(1.dp, badgeBorderColor)
+            border = BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -1048,12 +1044,12 @@ fun TypeFilterDropdownBadge(
                     text = "Type: $selectedCategory",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = badgeContentColor
+                    color = colorScheme.onSurfaceVariant
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = "Open type filter",
-                    tint = badgeContentColor,
+                    tint = colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
             }

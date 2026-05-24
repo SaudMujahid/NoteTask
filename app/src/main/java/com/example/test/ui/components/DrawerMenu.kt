@@ -138,7 +138,7 @@ fun DrawerMenu(
                     DrawerMenuItem(
                         label = if (isDarkTheme) "Light Mode" else "Dark Mode",
                         icon = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        iconTint = Color(0xFFFFD700),
+                        iconTint = colorScheme.primary,
                         textColor = colorScheme.onSurface,
                         onClick = {
                             onToggleDarkMode()
