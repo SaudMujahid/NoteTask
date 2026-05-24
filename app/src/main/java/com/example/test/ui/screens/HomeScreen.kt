@@ -31,6 +31,7 @@ import com.example.test.data.models.Task
 import com.example.test.data.repository.ProfileRepository
 import com.example.test.ui.components.DrawerMenu
 import com.example.test.ui.components.SwipeOffTaskItem
+import com.example.test.ui.components.TaskCategories
 import com.example.test.ui.components.TaskItem
 import com.example.test.ui.components.TransferSheet
 import com.example.test.ui.theme.*
@@ -85,23 +86,19 @@ fun HomeScreen(
     }
 
     val todayTasks = remember(taskState, today) { taskState.filter { it.date == today } }
-    val availableCategories = remember {
-        TaskCategoryFilter.entries
-            .filter { it != TaskCategoryFilter.ALL }
-            .sortedBy { it.label }
-    }
+    val availableCategories = remember { TaskCategories.ALL_CATEGORIES }
     val pendingTasks = remember(todayTasks) { todayTasks.filter { !it.isChecked } }
     val completedTasks = remember(todayTasks) { todayTasks.filter { it.isChecked } }
     var homeTaskFilter by remember { mutableStateOf(HomeTaskFilter.PENDING) }
-    var selectedCategory by remember { mutableStateOf(TaskCategoryFilter.ALL) }
+    var selectedCategory by remember { mutableStateOf(TaskCategories.ALL) }
     val statusFilteredTasks = when (homeTaskFilter) {
         HomeTaskFilter.PENDING -> pendingTasks
         HomeTaskFilter.COMPLETED -> completedTasks
     }
-    val filteredTasks = if (selectedCategory == TaskCategoryFilter.ALL) {
+    val filteredTasks = if (selectedCategory == TaskCategories.ALL) {
         statusFilteredTasks
     } else {
-        statusFilteredTasks.filter { TaskCategoryFilter.fromTaskCategory(it.category) == selectedCategory }
+        statusFilteredTasks.filter { it.category.equals(selectedCategory, ignoreCase = true) }
     }
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -190,16 +187,16 @@ fun HomeScreen(
                 TaskListCard(
                     tasks = filteredTasks,
                     emptyMessage = if (homeTaskFilter == HomeTaskFilter.PENDING) {
-                        if (selectedCategory == TaskCategoryFilter.ALL) {
+                        if (selectedCategory == TaskCategories.ALL) {
                             "No pending tasks for today."
                         } else {
-                            "No pending ${selectedCategory.label} tasks for today."
+                            "No pending $selectedCategory tasks for today."
                         }
                     } else {
-                        if (selectedCategory == TaskCategoryFilter.ALL) {
+                        if (selectedCategory == TaskCategories.ALL) {
                             "No completed tasks for today."
                         } else {
-                            "No completed ${selectedCategory.label} tasks for today."
+                            "No completed $selectedCategory tasks for today."
                         }
                     },
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) }

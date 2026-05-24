@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.test.data.models.Task
+import com.example.test.ui.components.TaskCategories
 import com.example.test.ui.theme.*
 import com.example.test.ui.utils.playCheckSound
 import com.example.test.ui.viewmodels.CalendarDay
@@ -819,23 +820,18 @@ fun CollapsibleTaskCard(
         label = "rotation"
     )
     var selectedFilter by remember(tasks) { mutableStateOf(TaskFilter.ALL) }
-    val availableCategories = remember {
-        TaskCategoryFilter.entries
-            .filter { it != TaskCategoryFilter.ALL }
-            .sortedBy { it.label }
-    }
-    var selectedCategory by remember { mutableStateOf(TaskCategoryFilter.ALL) }
-
+    val availableCategories = remember { TaskCategories.ALL_CATEGORIES }
+    var selectedCategory by remember { mutableStateOf(TaskCategories.ALL) }
     val statusFilteredTasks = when (selectedFilter) {
         TaskFilter.ALL -> tasks
         TaskFilter.PENDING -> tasks.filter { !it.isChecked }
         TaskFilter.COMPLETED -> tasks.filter { it.isChecked }
     }
 
-    val filteredTasks = if (selectedCategory == TaskCategoryFilter.ALL) {
+    val filteredTasks = if (selectedCategory == TaskCategories.ALL) {
         statusFilteredTasks
     } else {
-        statusFilteredTasks.filter { TaskCategoryFilter.fromTaskCategory(it.category) == selectedCategory }
+        statusFilteredTasks.filter { it.category.equals(selectedCategory, ignoreCase = true) }
     }
     Card(
         modifier = Modifier
@@ -951,20 +947,20 @@ fun CollapsibleTaskCard(
                         ) {
                             Text(
                                 text = when (selectedFilter) {
-                                    TaskFilter.PENDING -> if (selectedCategory == TaskCategoryFilter.ALL) {
+                                    TaskFilter.PENDING -> if (selectedCategory == TaskCategories.ALL) {
                                         "No pending tasks for this day"
                                     } else {
-                                        "No pending ${selectedCategory.label} tasks for this day"
+                                        "No pending $selectedCategory tasks for this day"
                                     }
-                                    TaskFilter.COMPLETED -> if (selectedCategory == TaskCategoryFilter.ALL) {
+                                    TaskFilter.COMPLETED -> if (selectedCategory == TaskCategories.ALL) {
                                         "No completed tasks for this day"
                                     } else {
-                                        "No completed ${selectedCategory.label} tasks for this day"
+                                        "No completed $selectedCategory tasks for this day"
                                     }
-                                    TaskFilter.ALL -> if (selectedCategory == TaskCategoryFilter.ALL) {
+                                    TaskFilter.ALL -> if (selectedCategory == TaskCategories.ALL) {
                                         "No tasks for this day"
                                     } else {
-                                        "No ${selectedCategory.label} tasks for this day"
+                                        "No $selectedCategory tasks for this day"
                                     }
                                 },
                                 color = colorScheme.onSurfaceVariant,
@@ -1027,9 +1023,9 @@ fun StatusBadge(
 
 @Composable
 fun TypeFilterDropdownBadge(
-    selectedCategory: TaskCategoryFilter,
-    categories: List<TaskCategoryFilter>,
-    onCategorySelected: (TaskCategoryFilter) -> Unit,
+    selectedCategory: String,
+    categories: List<String>,
+    onCategorySelected: (String) -> Unit,
     badgeBackgroundColor: Color = FilterBadgeBg,
     badgeBorderColor: Color = FilterBadgeBorder,
     badgeContentColor: Color = BorderBlue
@@ -1049,7 +1045,7 @@ fun TypeFilterDropdownBadge(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "Type: ${selectedCategory.label}",
+                    text = "Type: $selectedCategory",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = badgeContentColor
@@ -1063,24 +1059,15 @@ fun TypeFilterDropdownBadge(
             }
         }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text(TaskCategoryFilter.ALL.label) },
-                onClick = {
-                    onCategorySelected(TaskCategoryFilter.ALL)
-                    expanded = false
-                }
+                text = { Text(TaskCategories.ALL) },
+                onClick = { onCategorySelected(TaskCategories.ALL); expanded = false }
             )
             categories.forEach { category ->
                 DropdownMenuItem(
-                    text = { Text(category.label) },
-                    onClick = {
-                        onCategorySelected(category)
-                        expanded = false
-                    }
+                    text = { Text(category) },
+                    onClick = { onCategorySelected(category); expanded = false }
                 )
             }
         }
