@@ -15,25 +15,29 @@ import androidx.navigation.NavType
 import com.example.test.data.repository.ProfileRepository
 import com.example.test.data.repository.TaskRepository
 import com.example.test.data.repository.NoteRepository
+import com.example.test.data.repository.AppPreferencesRepository
 import com.example.test.ui.screens.*
 import com.example.test.ui.theme.TestTheme
 import com.example.test.ui.viewmodels.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun MyApp(
     taskRepository: TaskRepository,
     noteRepository: NoteRepository
 ) {
-    var isDarkTheme  by remember { mutableStateOf(false) }
-    var paletteIndex by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    val prefsRepo = remember { AppPreferencesRepository.getInstance(context) }
+    val profileRepository = remember { ProfileRepository.getInstance(context) }
+    val scope = rememberCoroutineScope()
+// Collect persisted values — starts with the saved value on every launch
+    val isDarkTheme  by prefsRepo.isDarkThemeFlow.collectAsState(initial = false)
+    val paletteIndex by prefsRepo.paletteIndexFlow.collectAsState(initial = 0)
 
     val navController = rememberNavController()
     val taskViewModel: TaskViewModel = viewModel(factory = ViewModelFactory(taskRepository))
     val calendarViewModel: CalendarViewModel = viewModel(factory = ViewModelFactory(taskRepository))
     val noteViewModel: NoteViewModel = viewModel(factory = ViewModelFactory(noteRepository))
-
-    val context = LocalContext.current
-    val profileRepository = remember { ProfileRepository.getInstance(context) }
 
     TestTheme(
         darkTheme = isDarkTheme,
@@ -59,13 +63,17 @@ fun MyApp(
                             taskViewModel = taskViewModel,
                             isDarkTheme = isDarkTheme,
                             paletteIndex = paletteIndex,
-                            onToggleDarkMode = { isDarkTheme = !isDarkTheme },
+                            onToggleDarkMode = {
+                                scope.launch { prefsRepo.setDarkTheme(!isDarkTheme) }
+                            },
                             onAddClick = { navController.navigate("add_task") },
                             onCalendarClick = { navController.navigate("calendar") },
                             onNotesClick = { navController.navigate("notes") },
                             onTasksClick = { navController.navigate("today_tasks") },
                             onStatsClick = { navController.navigate("stats") },
-                            onPaletteChange = { paletteIndex = it },
+                            onPaletteChange = { index -> 
+                                scope.launch { prefsRepo.setPaletteIndex(index) }
+                            },
                             onProfileClick = { navController.navigate("profile") }
                         )
                     }
