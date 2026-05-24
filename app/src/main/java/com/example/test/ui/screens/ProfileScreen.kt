@@ -34,7 +34,14 @@ fun ProfileScreen(
     val colorScheme = MaterialTheme.colorScheme
 
     var nameField by remember { mutableStateOf(profile.firstName) }
-    LaunchedEffect(profile.firstName) { nameField = profile.firstName }
+    var isEditingName by remember { mutableStateOf(false) }
+    var showNameWarning by remember { mutableStateOf(false) }
+
+    LaunchedEffect(profile.firstName) {
+        if (!isEditingName) {
+            nameField = profile.firstName
+        }
+    }
 
     var showPinDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -96,19 +103,42 @@ fun ProfileScreen(
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = nameField,
-                        onValueChange = { nameField = it },
+                        onValueChange = { if (isEditingName) nameField = it },
                         label = { Text("First Name") },
                         singleLine = true,
+                        enabled = isEditingName,
+                        readOnly = !isEditingName,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = { viewModel.updateFirstName(nameField) },
+                    Row(
                         modifier = Modifier.align(Alignment.End),
-                        shape = RoundedCornerShape(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Save Name")
+                        if (isEditingName) {
+                            TextButton(
+                                onClick = {
+                                    nameField = profile.firstName
+                                    isEditingName = false
+                                }
+                            ) {
+                                Text("Cancel")
+                            }
+                        }
+                        Button(
+                            onClick = {
+                                if (isEditingName) {
+                                    viewModel.updateFirstName(nameField)
+                                    isEditingName = false
+                                } else {
+                                    showNameWarning = true
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(if (isEditingName) "Save Name" else "Change Name")
+                        }
                     }
                 }
             }
@@ -127,28 +157,6 @@ fun ProfileScreen(
                         color = colorScheme.onSurface.copy(alpha = 0.6f),
                         fontSize = 14.sp
                     )
-                    
-                    if (profile.authType != AuthType.NONE) {
-                        Spacer(Modifier.height(16.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Require Lock on Startup", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                                Text("App will be locked when opened", fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
-                            }
-                            Switch(
-                                checked = profile.isAppLockEnabled,
-                                onCheckedChange = { viewModel.toggleAppLock(it) }
-                            )
-                        }
-                    }
-
                     Spacer(Modifier.height(16.dp))
 
                     AuthOptionCard(
@@ -189,6 +197,30 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(20.dp))
         }
+    }
+
+    // Name change warning dialog
+    if (showNameWarning) {
+        AlertDialog(
+            onDismissRequest = { showNameWarning = false },
+            title = { Text("Change Name?") },
+            text = {
+                Text("Are you sure you want to change your name? No information will be lost.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showNameWarning = false
+                        isEditingName = true
+                    }
+                ) { Text("Continue") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNameWarning = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showPinDialog) {
