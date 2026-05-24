@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,7 +40,8 @@ val NoteColorMap = mapOf(
 fun NotesScreen(
     noteViewModel: NoteViewModel,
     onNoteClick: (Long) -> Unit,
-    onNewNote: (String) -> Unit
+    onNewNote: (String) -> Unit,
+    onBack: () -> Unit = {}
 ) {
     val notes by noteViewModel.notes.collectAsState()
     val searchQuery by noteViewModel.searchQuery.collectAsState()
@@ -64,30 +67,61 @@ fun NotesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 6.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+
                     if (showSearch) {
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { noteViewModel.setSearchQuery(it) },
                             placeholder = { Text("Search notes...") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
                         )
                     } else {
-                        Text("Notes", fontWeight = FontWeight.Black, fontSize = 28.sp)
+                        Text(
+                            text = "Notes",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 28.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
-                },
-                actions = {
+
+                    Spacer(Modifier.width(8.dp))
+
                     IconButton(onClick = {
                         showSearch = !showSearch
                         if (!showSearch) noteViewModel.setSearchQuery("")
                     }) {
-                        Icon(if (showSearch) Icons.Default.Close else Icons.Default.Search, null)
+                        Icon(
+                            imageVector = if (showSearch) Icons.Default.Close else Icons.Default.Search,
+                            contentDescription = if (showSearch) "Close search" else "Search"
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = colorScheme.background)
-            )
+                }
+
+                // The colored divider — exact same style as StatsScreen
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -71,7 +71,7 @@ fun MyApp(
                             onNotesClick = { navController.navigate("notes") },
                             onTasksClick = { navController.navigate("today_tasks") },
                             onStatsClick = { navController.navigate("stats") },
-                            onPaletteChange = { index -> 
+                            onPaletteChange = { index ->
                                 scope.launch { prefsRepo.setPaletteIndex(index) }
                             },
                             onProfileClick = { navController.navigate("profile") }
@@ -128,7 +128,8 @@ fun MyApp(
                             },
                             onNewNote = { type ->
                                 navController.navigate("note_editor/-1/$type")
-                            }
+                            },
+                            onBack = { navController.popBackStack() }
                         )
                     }
 
