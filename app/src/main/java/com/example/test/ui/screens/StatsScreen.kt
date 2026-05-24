@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.test.ui.viewmodels.TaskViewModel
@@ -36,6 +37,14 @@ private val ChartPalette = listOf(
 private val CompletedGreen = Color(0xFF4ADE80)
 private val PendingAmber  = Color(0xFFFFA040)
 private enum class StatsPeriod { WEEK, MONTH }
+
+private data class BarSegmentData(
+    val label: String,
+    val subLabel: String? = null,
+    val total: Int,
+    val categoryBreakdown: List<Pair<String, Int>>,
+    val isHighlighted: Boolean = false
+)
 
 @Composable
 fun StatsScreen(
@@ -51,14 +60,18 @@ fun StatsScreen(
         val cal = Calendar.getInstance()
         when (period) {
             StatsPeriod.WEEK -> {
+                // Week starts Friday, ends Thursday
                 val dow = cal.get(Calendar.DAY_OF_WEEK)
-                cal.add(Calendar.DAY_OF_YEAR, -(dow - Calendar.MONDAY + 7) % 7)
-                val s = sdf.format(cal.time); cal.add(Calendar.DAY_OF_YEAR, 6)
+                val daysSinceFriday = (dow - Calendar.FRIDAY + 7) % 7
+                cal.add(Calendar.DAY_OF_YEAR, -daysSinceFriday)
+                val s = sdf.format(cal.time)
+                cal.add(Calendar.DAY_OF_YEAR, 6)
                 s to sdf.format(cal.time)
             }
             StatsPeriod.MONTH -> {
                 cal.set(Calendar.DAY_OF_MONTH, 1)
-                val s = sdf.format(cal.time); cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+                val s = sdf.format(cal.time)
+                cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
                 s to sdf.format(cal.time)
             }
         }
@@ -72,17 +85,61 @@ fun StatsScreen(
     val categoryStats = remember(filteredTasks) {
         filteredTasks.groupBy { it.category.ifBlank { "Uncategorized" } }.map { (cat, list) -> cat to list.size }.sortedByDescending { it.second }
     }
-    val weekDayStats = remember(tasks) {
-        val cal = Calendar.getInstance()
-        val dow = cal.get(Calendar.DAY_OF_WEEK)
-        cal.add(Calendar.DAY_OF_YEAR, -(dow - Calendar.MONDAY + 7) % 7)
+
+    // Day-by-day stats for WEEK view (Friday to Thursday) — uses filteredTasks
+    val weekDayStats = remember(filteredTasks, periodStart, periodEnd) {
+        val cal = Calendar.getInstance().apply { time = sdf.parse(periodStart)!! }
         (0..6).map { offset ->
             val day = (cal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, offset) }
             val dateStr = sdf.format(day.time)
             val dayLabel = SimpleDateFormat("EEE", Locale.getDefault()).format(day.time).take(2)
-            val dayTasks = tasks.filter { it.date == dateStr }
-            Triple(dayLabel, dayTasks.count { it.isChecked }, dayTasks.size)
+            val dayTasks = filteredTasks.filter { it.date == dateStr }
+            val categoryBreakdown = dayTasks.groupBy { it.category.ifBlank { "Uncategorized" } }
+                .map { (cat, list) -> cat to list.size }
+                .sortedByDescending { it.second }
+            val isToday = dateStr == sdf.format(Date())
+            BarSegmentData(
+                label = dayLabel,
+                total = dayTasks.size,
+                categoryBreakdown = categoryBreakdown,
+                isHighlighted = isToday
+            )
         }
+    }
+
+    // Week-by-week stats for MONTH view — uses filteredTasks
+    val monthWeekStats = remember(filteredTasks, periodStart, periodEnd) {
+        val endCal = Calendar.getInstance().apply { time = sdf.parse(periodEnd)!! }
+        val maxDay = endCal.get(Calendar.DAY_OF_MONTH)
+        val yearMonth = periodStart.dropLast(3)
+
+        val weeks = mutableListOf<BarSegmentData>()
+        var currentDay = 1
+        var weekNum = 1
+
+        while (currentDay <= maxDay) {
+            val weekStart = currentDay
+            val weekEnd = minOf(currentDay + 6, maxDay)
+
+            val weekStartStr = "$yearMonth-${weekStart.toString().padStart(2, '0')}"
+            val weekEndStr = "$yearMonth-${weekEnd.toString().padStart(2, '0')}"
+
+            val weekTasks = filteredTasks.filter { it.date in weekStartStr..weekEndStr }
+            val weekCompleted = weekTasks.count { it.isChecked }
+            val categoryBreakdown = weekTasks.groupBy { it.category.ifBlank { "Uncategorized" } }
+                .map { (cat, list) -> cat to list.size }
+                .sortedByDescending { it.second }
+
+            weeks.add(BarSegmentData(
+                label = weekCompleted.toString(),
+                subLabel = "W$weekNum",
+                total = weekTasks.size,
+                categoryBreakdown = categoryBreakdown
+            ))
+            currentDay = weekEnd + 1
+            weekNum++
+        }
+        weeks
     }
 
     Column(modifier = Modifier.fillMaxSize().background(cs.background).verticalScroll(rememberScrollState())) {
@@ -104,9 +161,21 @@ fun StatsScreen(
         Spacer(Modifier.height(16.dp))
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AnimatedDonutChart(rate = rate, completed = completed, total = total) }
         Spacer(Modifier.height(36.dp))
-        SectionLabel("This Week, Day by Day", Modifier.padding(horizontal = 16.dp))
-        Spacer(Modifier.height(14.dp))
-        WeekDayBars(stats = weekDayStats, modifier = Modifier.padding(horizontal = 16.dp))
+
+        // Conditional section: day-by-day for week, week-by-week for month
+        when (period) {
+            StatsPeriod.WEEK -> {
+                SectionLabel("This Week, Day by Day", Modifier.padding(horizontal = 16.dp))
+                Spacer(Modifier.height(14.dp))
+                StackedBarsContainer(stats = weekDayStats, barWidth = 26.dp, modifier = Modifier.padding(horizontal = 16.dp))
+            }
+            StatsPeriod.MONTH -> {
+                SectionLabel("This Month, Week by Week", Modifier.padding(horizontal = 16.dp))
+                Spacer(Modifier.height(14.dp))
+                StackedBarsContainer(stats = monthWeekStats, barWidth = 32.dp, modifier = Modifier.padding(horizontal = 16.dp))
+            }
+        }
+
         Spacer(Modifier.height(36.dp))
         if (categoryStats.isNotEmpty()) {
             SectionLabel("By Category", Modifier.padding(horizontal = 16.dp))
@@ -173,31 +242,91 @@ private fun AnimatedDonutChart(rate: Float, completed: Int, total: Int) {
 }
 
 @Composable
-private fun WeekDayBars(stats: List<Triple<String, Int, Int>>, modifier: Modifier = Modifier) {
+private fun StackedBarsContainer(
+    stats: List<BarSegmentData>,
+    barWidth: Dp,
+    modifier: Modifier = Modifier
+) {
     val cs = MaterialTheme.colorScheme
-    val maxTotal = stats.maxOfOrNull { it.third }.takeIf { it != null && it > 0 } ?: 1
-    val todayLabel = SimpleDateFormat("EEE", Locale.getDefault()).format(Date()).take(2)
+    val maxTotal = stats.maxOfOrNull { it.total }.takeIf { it != null && it > 0 } ?: 1
     Card(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 20.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
-            stats.forEach { (label, done, total) -> WeekDayBar(label = label, completed = done, total = total, maxTotal = maxTotal, isToday = label == todayLabel, primaryColor = cs.primary) }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            stats.forEach { data ->
+                StackedBar(data = data, maxTotal = maxTotal, primaryColor = cs.primary, barWidth = barWidth)
+            }
         }
     }
 }
 
 @Composable
-private fun WeekDayBar(label: String, completed: Int, total: Int, maxTotal: Int, isToday: Boolean, primaryColor: Color) {
-    val maxH = 110.dp; val barW = 26.dp
-    val animTotal by animateFloatAsState(targetValue = (total.toFloat() / maxTotal).coerceIn(0f, 1f), animationSpec = tween(900))
-    val animDone by animateFloatAsState(targetValue = if (total > 0) (completed.toFloat() / maxTotal).coerceIn(0f, 1f) else 0f, animationSpec = tween(1100))
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom, modifier = Modifier.height(maxH + 36.dp)) {
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.width(barW).height(maxH)) {
-            Box(modifier = Modifier.width(barW).fillMaxHeight(if (animTotal > 0f) animTotal else 0.04f).clip(RoundedCornerShape(7.dp)).background(primaryColor.copy(alpha = 0.15f)))
-            if (animDone > 0f) Box(modifier = Modifier.width(barW).fillMaxHeight(animDone).clip(RoundedCornerShape(7.dp)).background(CompletedGreen))
+private fun StackedBar(
+    data: BarSegmentData,
+    maxTotal: Int,
+    primaryColor: Color,
+    barWidth: Dp
+) {
+    val maxH = 110.dp
+    val animTotal by animateFloatAsState(
+        targetValue = (data.total.toFloat() / maxTotal).coerceIn(0f, 1f),
+        animationSpec = tween(900)
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Bottom,
+        modifier = Modifier.height(maxH + 44.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.BottomCenter,
+            modifier = Modifier.width(barWidth).height(maxH)
+        ) {
+            // Background track (total height)
+            Box(
+                modifier = Modifier
+                    .width(barWidth)
+                    .fillMaxHeight(if (animTotal > 0f) animTotal else 0.04f)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(primaryColor.copy(alpha = 0.08f))
+            ) {
+                // Stacked category segments inside the total height
+                if (data.total > 0) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        data.categoryBreakdown.forEachIndexed { idx, (_, count) ->
+                            val fraction = count.toFloat() / data.total
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(fraction)
+                                    .background(ChartPalette[idx % ChartPalette.size])
+                            )
+                        }
+                    }
+                }
+            }
         }
         Spacer(Modifier.height(8.dp))
-        Text(text = label, fontSize = 11.sp, fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal, color = if (isToday) primaryColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-        Spacer(Modifier.height(3.dp))
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(if (isToday) primaryColor else Color.Transparent))
+        Text(
+            text = data.label,
+            fontSize = if (data.isHighlighted) 13.sp else 12.sp,
+            fontWeight = if (data.isHighlighted) FontWeight.Bold else FontWeight.Normal,
+            color = if (data.isHighlighted) primaryColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        )
+        data.subLabel?.let {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = it,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+        }
+        if (data.isHighlighted) {
+            Spacer(Modifier.height(3.dp))
+            Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(primaryColor))
+        }
     }
 }
 
