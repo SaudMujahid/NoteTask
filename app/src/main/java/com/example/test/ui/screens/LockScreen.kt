@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +36,7 @@ fun AppLockGate(
     content: @Composable () -> Unit
 ) {
     val profile by profileRepository.profileFlow.collectAsState()
-    var isUnlocked by remember { mutableStateOf(!profile.isAppLockEnabled || profile.authType == AuthType.NONE) }
+    var isUnlocked by rememberSaveable { mutableStateOf(!profile.isAppLockEnabled || profile.authType == AuthType.NONE) }
 
     LaunchedEffect(profile.isAppLockEnabled, profile.authType) {
         if (!profile.isAppLockEnabled || profile.authType == AuthType.NONE) {
@@ -220,7 +221,7 @@ fun NoteAuthDialog(
 
 @Composable
 private fun PinChallenge(onSubmit: (String) -> Unit) {
-    var pin by remember { mutableStateOf("") }
+    var pin by rememberSaveable { mutableStateOf("") }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -284,7 +285,7 @@ private fun PinChallenge(onSubmit: (String) -> Unit) {
 
 @Composable
 private fun PasswordChallenge(onSubmit: (String) -> Unit) {
-    var password by remember { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -317,8 +318,8 @@ private fun BiometricChallenge(
     onBackupPinSubmit: (String) -> Boolean
 ) {
     val context = LocalContext.current
-    var showBackup by remember { mutableStateOf(false) }
-    var backupError by remember { mutableStateOf<String?>(null) }
+    var showBackup by rememberSaveable { mutableStateOf(false) }
+    var backupError by rememberSaveable { mutableStateOf<String?>(null) }
 
     if (showBackup) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

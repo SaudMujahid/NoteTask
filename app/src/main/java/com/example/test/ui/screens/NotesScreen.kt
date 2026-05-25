@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -46,11 +47,11 @@ fun NotesScreen(
     val notes by noteViewModel.notes.collectAsState()
     val searchQuery by noteViewModel.searchQuery.collectAsState()
     val filterType by noteViewModel.filterType.collectAsState()
-    var showSearch by remember { mutableStateOf(false) }
-    var showFabMenu by remember { mutableStateOf(false) }
+    var showSearch by rememberSaveable { mutableStateOf(false) }
+    var showFabMenu by rememberSaveable { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
     val isDark = isSystemInDarkTheme()
-    var lockedNoteId by remember { mutableStateOf<Long?>(null) }
+    var lockedNoteId by rememberSaveable { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val profileRepo = remember { ProfileRepository.getInstance(context) }
 

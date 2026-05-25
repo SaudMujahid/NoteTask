@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,9 +37,9 @@ fun ProfileScreen(
     val colorScheme = MaterialTheme.colorScheme
     val isDark = isSystemInDarkTheme()
 
-    var nameField by remember { mutableStateOf(profile.firstName) }
-    var isEditingName by remember { mutableStateOf(false) }
-    var showNameWarning by remember { mutableStateOf(false) }
+    var nameField by rememberSaveable { mutableStateOf(profile.firstName) }
+    var isEditingName by rememberSaveable { mutableStateOf(false) }
+    var showNameWarning by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(profile.firstName) {
         if (!isEditingName) {
@@ -46,10 +47,10 @@ fun ProfileScreen(
         }
     }
 
-    var showPinDialog by remember { mutableStateOf(false) }
-    var showPasswordDialog by remember { mutableStateOf(false) }
-    var showFingerprintDisclaimer by remember { mutableStateOf(false) }
-    var showFingerprintPinDialog by remember { mutableStateOf(false) }
+    var showPinDialog by rememberSaveable { mutableStateOf(false) }
+    var showPasswordDialog by rememberSaveable { mutableStateOf(false) }
+    var showFingerprintDisclaimer by rememberSaveable { mutableStateOf(false) }
+    var showFingerprintPinDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(setupState) {
         when (setupState) {
@@ -345,10 +346,10 @@ private fun PinSetupDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var step by remember { mutableStateOf(1) }
-    var pin1 by remember { mutableStateOf("") }
-    var pin2 by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var step by rememberSaveable { mutableStateOf(1) }
+    var pin1 by rememberSaveable { mutableStateOf("") }
+    var pin2 by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -392,9 +393,9 @@ private fun PasswordSetupDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var pass1 by remember { mutableStateOf("") }
-    var pass2 by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var pass1 by rememberSaveable { mutableStateOf("") }
+    var pass2 by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

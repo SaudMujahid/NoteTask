@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,8 +33,28 @@ fun MyApp(
     val profileRepository = remember { ProfileRepository.getInstance(context) }
     val scope = rememberCoroutineScope()
 
-    val isDarkTheme  by prefsRepo.isDarkThemeFlow.collectAsState(initial = false)
-    val paletteIndex by prefsRepo.paletteIndexFlow.collectAsState(initial = 0)
+    val isDarkThemeFlow = remember { prefsRepo.isDarkThemeFlow }
+    val paletteIndexFlow = remember { prefsRepo.paletteIndexFlow }
+
+    var isDarkTheme by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    var paletteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+
+    val collectedDarkTheme by isDarkThemeFlow.collectAsState(initial = isDarkTheme)
+    val collectedPaletteIndex by paletteIndexFlow.collectAsState(initial = paletteIndex)
+
+    LaunchedEffect(collectedDarkTheme) {
+        if (collectedDarkTheme != null) isDarkTheme = collectedDarkTheme
+    }
+    LaunchedEffect(collectedPaletteIndex) {
+        if (collectedPaletteIndex != null) paletteIndex = collectedPaletteIndex
+    }
+
+    if (isDarkTheme == null || paletteIndex == null) {
+        return
+    }
+
+    val currentDarkTheme = isDarkTheme!!
+    val currentPaletteIndex = paletteIndex!!
 
     val navController = rememberNavController()
     val taskViewModel: TaskViewModel = viewModel(factory = ViewModelFactory(taskRepository))
@@ -43,8 +64,8 @@ fun MyApp(
     var taskToEdit by remember { mutableStateOf<Task?>(null) }
 
     TestTheme(
-        darkTheme = isDarkTheme,
-        paletteIndex = paletteIndex
+        darkTheme = currentDarkTheme,
+        paletteIndex = currentPaletteIndex
     ) {
         AppLockGate(profileRepository = profileRepository) {
             Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -64,10 +85,10 @@ fun MyApp(
                     composable("home") {
                         HomeScreen(
                             taskViewModel = taskViewModel,
-                            isDarkTheme = isDarkTheme,
-                            paletteIndex = paletteIndex,
+                            isDarkTheme = currentDarkTheme,
+                            paletteIndex = currentPaletteIndex,
                             onToggleDarkMode = {
-                                scope.launch { prefsRepo.setDarkTheme(!isDarkTheme) }
+                                scope.launch { prefsRepo.setDarkTheme(!currentDarkTheme) }
                             },
                             onAddTask = { task ->
                                 taskToEdit = task
