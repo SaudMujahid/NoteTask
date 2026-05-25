@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
+import com.example.test.data.models.Task
 import com.example.test.data.repository.ProfileRepository
 import com.example.test.data.repository.TaskRepository
 import com.example.test.data.repository.NoteRepository
@@ -30,7 +31,7 @@ fun MyApp(
     val prefsRepo = remember { AppPreferencesRepository.getInstance(context) }
     val profileRepository = remember { ProfileRepository.getInstance(context) }
     val scope = rememberCoroutineScope()
-// Collect persisted values — starts with the saved value on every launch
+
     val isDarkTheme  by prefsRepo.isDarkThemeFlow.collectAsState(initial = false)
     val paletteIndex by prefsRepo.paletteIndexFlow.collectAsState(initial = 0)
 
@@ -38,6 +39,8 @@ fun MyApp(
     val taskViewModel: TaskViewModel = viewModel(factory = ViewModelFactory(taskRepository))
     val calendarViewModel: CalendarViewModel = viewModel(factory = ViewModelFactory(taskRepository))
     val noteViewModel: NoteViewModel = viewModel(factory = ViewModelFactory(noteRepository))
+
+    var taskToEdit by remember { mutableStateOf<Task?>(null) }
 
     TestTheme(
         darkTheme = isDarkTheme,
@@ -66,7 +69,10 @@ fun MyApp(
                             onToggleDarkMode = {
                                 scope.launch { prefsRepo.setDarkTheme(!isDarkTheme) }
                             },
-                            onAddClick = { navController.navigate("add_task") },
+                            onAddTask = { task ->
+                                taskToEdit = task
+                                navController.navigate("add_task")
+                            },
                             onCalendarClick = { navController.navigate("calendar") },
                             onNotesClick = { navController.navigate("notes") },
                             onTasksClick = { navController.navigate("today_tasks") },
@@ -87,6 +93,10 @@ fun MyApp(
                     composable("today_tasks") {
                         TodayTasksScreen(
                             taskViewModel = taskViewModel,
+                            onAddTask = { task ->
+                                taskToEdit = task
+                                navController.navigate("add_task")
+                            },
                             onClose = { navController.popBackStack() }
                         )
                     }
@@ -104,18 +114,28 @@ fun MyApp(
                         AddTaskScreen(
                             taskViewModel = taskViewModel,
                             onClose = { navController.popBackStack() },
-                            initialDateMillis = if (dateMillis > 0) dateMillis else null
+                            initialDateMillis = if (dateMillis > 0) dateMillis else null,
+                            existingTask = taskToEdit
                         )
+                        // Clear taskToEdit when screen is disposed
+                        DisposableEffect(Unit) {
+                            onDispose { taskToEdit = null }
+                        }
                     }
 
                     composable("calendar") {
                         CalendarScreen(
                             viewModel = calendarViewModel,
                             onNavigateHome = { navController.popBackStack("home", false) },
-                            onAddTaskClick = {
-                                val selectedDate = calendarViewModel.selectedDate.value
-                                val dateMillis = selectedDate.time
-                                navController.navigate("add_task?dateMillis=$dateMillis")
+                            onAddTask = { task ->
+                                taskToEdit = task
+                                if (task == null) {
+                                    val selectedDate = calendarViewModel.selectedDate.value
+                                    val dateMillis = selectedDate.time
+                                    navController.navigate("add_task?dateMillis=$dateMillis")
+                                } else {
+                                    navController.navigate("add_task")
+                                }
                             }
                         )
                     }

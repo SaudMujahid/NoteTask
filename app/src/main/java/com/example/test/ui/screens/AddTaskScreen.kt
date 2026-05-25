@@ -6,29 +6,26 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.AccessTime
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalContext
+import com.example.test.data.models.Task
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -40,30 +37,43 @@ private val Categories = listOf("Personal", "Work", "University", "Other")
 fun AddTaskScreen(
     taskViewModel: TaskViewModel,
     onClose: () -> Unit,
-    initialDateMillis: Long? = null
+    initialDateMillis: Long? = null,
+    existingTask: Task? = null
 ) {
     val cs = MaterialTheme.colorScheme
     val context = LocalContext.current
 
-    var title    by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf(Categories.first()) }
+    // ── Pre-fill helpers ─────────────────────────────────────────────
+    val existingDateMillis = remember(existingTask) {
+        existingTask?.date?.let {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
+        }
+    }
 
-    val todayMillis        = remember { Calendar.getInstance().timeInMillis }
-    var selectedDateMillis by remember { mutableStateOf(initialDateMillis ?: todayMillis) }
-    var showDatePicker     by remember { mutableStateOf(false) }
-    var isScheduled        by remember { mutableStateOf(false) }
-    var startMinutes       by remember { mutableStateOf(9 * 60) }
-    var endMinutes         by remember { mutableStateOf(10 * 60) }
+    // ── State (existingTask first, then fallbacks) ───────────────────
+    var title    by remember(existingTask) { mutableStateOf(existingTask?.title ?: "") }
+    var category by remember(existingTask) { mutableStateOf(existingTask?.category ?: Categories.first()) }
 
-    var notificationMinutes by remember { mutableStateOf<Int?>(null) }
-    var description by remember { mutableStateOf("") }
+    val todayMillis = remember { Calendar.getInstance().timeInMillis }
+    var selectedDateMillis by remember(existingTask, initialDateMillis) {
+        mutableStateOf(existingDateMillis ?: initialDateMillis ?: todayMillis)
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
 
+    var isScheduled  by remember(existingTask) { mutableStateOf(existingTask?.isScheduled ?: false) }
+    var startMinutes by remember(existingTask) { mutableStateOf(existingTask?.scheduleStartMinutes ?: 9 * 60) }
+    var endMinutes   by remember(existingTask) { mutableStateOf(existingTask?.scheduleEndMinutes ?: 10 * 60) }
+
+    var notificationMinutes by remember(existingTask) { mutableStateOf(existingTask?.notificationMinutes) }
+    var description by remember(existingTask) { mutableStateOf(existingTask?.description ?: "") }
+
+    // ── Formatters ───────────────────────────────────────────────────
     val dateFormatter    = remember { SimpleDateFormat("yyyy-MM-dd",  Locale.getDefault()) }
     val displayFormatter = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()) }
+    val timeFormatter    = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
 
     val date        = remember(selectedDateMillis) { dateFormatter.format(Date(selectedDateMillis)) }
     val dateDisplay = remember(selectedDateMillis) { displayFormatter.format(Date(selectedDateMillis)) }
-    val timeFormatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
 
     fun formatMinutes(minutes: Int): String {
         val cal = Calendar.getInstance().apply {
@@ -116,14 +126,21 @@ fun AddTaskScreen(
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(top = 56.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 56.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
             contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
         ) {
             item {
-                Text("New Task", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                Text(
+                    text = if (existingTask == null) "New Task" else "Edit Task",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black
+                )
             }
             item { Spacer(Modifier.height(24.dp)) }
 
+            // ── Title & Description ──────────────────────────────────
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -134,7 +151,11 @@ fun AddTaskScreen(
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Box(modifier = Modifier.fillMaxWidth()) {
                             if (title.isEmpty()) {
-                                Text("What would you like to do?", fontSize = 15.sp, color = cs.onSurface.copy(alpha = 0.35f))
+                                Text(
+                                    "What would you like to do?",
+                                    fontSize = 15.sp,
+                                    color = cs.onSurface.copy(alpha = 0.35f)
+                                )
                             }
                             BasicTextField(
                                 value = title,
@@ -150,12 +171,19 @@ fun AddTaskScreen(
                         Spacer(Modifier.height(8.dp))
                         Box(modifier = Modifier.fillMaxWidth()) {
                             if (description.isEmpty()) {
-                                Text("description", fontSize = 13.sp, color = cs.onSurface.copy(alpha = 0.3f))
+                                Text(
+                                    "Description",
+                                    fontSize = 13.sp,
+                                    color = cs.onSurface.copy(alpha = 0.3f)
+                                )
                             }
                             BasicTextField(
                                 value = description,
                                 onValueChange = { description = it },
-                                textStyle = LocalTextStyle.current.copy(fontSize = 13.sp, color = cs.onSurface.copy(alpha = 0.75f)),
+                                textStyle = LocalTextStyle.current.copy(
+                                    fontSize = 13.sp,
+                                    color = cs.onSurface.copy(alpha = 0.75f)
+                                ),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -164,8 +192,14 @@ fun AddTaskScreen(
             }
             item { Spacer(Modifier.height(20.dp)) }
 
+            // ── Category ─────────────────────────────────────────────
             item {
-                Text("Category", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 10.dp))
+                Text(
+                    "Category",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(Categories) { cat ->
                         val selected = cat == category
@@ -176,15 +210,25 @@ fun AddTaskScreen(
                                 .clickable { category = cat }
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
-                            Text(cat, fontSize = 13.sp, color = if (selected) cs.onPrimary else cs.onSurfaceVariant)
+                            Text(
+                                cat,
+                                fontSize = 13.sp,
+                                color = if (selected) cs.onPrimary else cs.onSurfaceVariant
+                            )
                         }
                     }
                 }
             }
             item { Spacer(Modifier.height(20.dp)) }
 
+            // ── Date & Time ──────────────────────────────────────────
             item {
-                Text("Date & Time", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 10.dp))
+                Text(
+                    "Date & Time",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Surface(
                         onClick = { showDatePicker = true },
@@ -193,27 +237,58 @@ fun AddTaskScreen(
                         color = cs.surface,
                         border = androidx.compose.foundation.BorderStroke(1.dp, cs.outline)
                     ) {
-                        Row(modifier = Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(dateDisplay, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                            Icon(Icons.Default.DateRange, null, tint = cs.primary, modifier = Modifier.size(18.dp))
+                            Icon(
+                                Icons.Default.DateRange,
+                                null,
+                                tint = cs.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                     Surface(
                         onClick = {
-                            val init = notificationMinutes ?: (Calendar.getInstance().run { get(Calendar.HOUR_OF_DAY) * 60 + get(Calendar.MINUTE) })
+                            val init = notificationMinutes
+                                ?: (Calendar.getInstance().run {
+                                    get(Calendar.HOUR_OF_DAY) * 60 + get(Calendar.MINUTE)
+                                })
                             pickTime(init) { notificationMinutes = it }
                         },
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(8.dp),
                         color = if (notificationMinutes != null) cs.primaryContainer else cs.surface,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, if (notificationMinutes != null) cs.primary else cs.outline)
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (notificationMinutes != null) cs.primary else cs.outline
+                        )
                     ) {
-                        Row(modifier = Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(notificationMinutes?.let { formatMinutes(it) } ?: "Set Time", fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                notificationMinutes?.let { formatMinutes(it) } ?: "Set Time",
+                                fontSize = 13.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             if (notificationMinutes != null) {
-                                Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp).clickable { notificationMinutes = null })
+                                Icon(
+                                    Icons.Default.Close,
+                                    null,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable { notificationMinutes = null }
+                                )
                             } else {
-                                Icon(Icons.Outlined.AccessTime, null, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Outlined.AccessTime,
+                                    null,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     }
@@ -221,11 +296,20 @@ fun AddTaskScreen(
             }
             item { Spacer(Modifier.height(16.dp)) }
 
+            // ── Schedule toggle ──────────────────────────────────────
             item {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Schedule task", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Show this task as a time block on the calendar", fontSize = 11.sp, color = cs.onSurface.copy(alpha = 0.38f))
+                        Text(
+                            "Show this task as a time block on the calendar",
+                            fontSize = 11.sp,
+                            color = cs.onSurface.copy(alpha = 0.38f)
+                        )
                     }
                     Switch(checked = isScheduled, onCheckedChange = { isScheduled = it })
                 }
@@ -235,16 +319,32 @@ fun AddTaskScreen(
                 item {
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(onClick = { pickTime(startMinutes) { startMinutes = it } }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
+                        OutlinedButton(
+                            onClick = { pickTime(startMinutes) { startMinutes = it } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
                             Column {
                                 Text("Start", fontSize = 11.sp)
-                                Text(formatMinutes(startMinutes), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    formatMinutes(startMinutes),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
-                        OutlinedButton(onClick = { pickTime(endMinutes) { endMinutes = it } }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
+                        OutlinedButton(
+                            onClick = { pickTime(endMinutes) { endMinutes = it } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
                             Column {
                                 Text("End", fontSize = 11.sp)
-                                Text(formatMinutes(endMinutes), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    formatMinutes(endMinutes),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
                     }
@@ -252,11 +352,32 @@ fun AddTaskScreen(
             }
             item { Spacer(Modifier.height(32.dp)) }
 
+            // ── Save (Add vs Update) ─────────────────────────────────
             item {
                 Button(
                     onClick = {
-                        if (title.isNotBlank()) {
-                            val normalizedEnd = if (isScheduled && endMinutes <= startMinutes) (startMinutes + 60).coerceAtMost(23 * 60 + 59) else endMinutes
+                        if (title.isBlank()) return@Button
+
+                        val normalizedEnd = if (isScheduled && endMinutes <= startMinutes) {
+                            (startMinutes + 60).coerceAtMost(23 * 60 + 59)
+                        } else endMinutes
+
+                        if (existingTask != null) {
+                            // UPDATE existing task
+                            taskViewModel.updateTask(
+                                existingTask.copy(
+                                    title = title,
+                                    description = description,
+                                    category = category,
+                                    date = date,
+                                    isScheduled = isScheduled,
+                                    scheduleStartMinutes = if (isScheduled) startMinutes else null,
+                                    scheduleEndMinutes = if (isScheduled) normalizedEnd else null,
+                                    notificationMinutes = notificationMinutes
+                                )
+                            )
+                        } else {
+                            // CREATE new task
                             taskViewModel.addTask(
                                 title = title,
                                 description = description,
@@ -267,14 +388,19 @@ fun AddTaskScreen(
                                 scheduleEndMinutes = if (isScheduled) normalizedEnd else null,
                                 notificationMinutes = notificationMinutes
                             )
-                            onClose()
                         }
+                        onClose()
                     },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     enabled = title.isNotBlank()
                 ) {
-                    Text("Save", fontSize = 16.sp)
+                    Text(
+                        if (existingTask == null) "Save" else "Update",
+                        fontSize = 16.sp
+                    )
                 }
             }
         }

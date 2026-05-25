@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.test.data.models.Task
 import com.example.test.ui.components.TaskCategories
+import com.example.test.ui.components.TaskItem
 import com.example.test.ui.theme.*
 import com.example.test.ui.utils.playCheckSound
 import com.example.test.ui.viewmodels.CalendarDay
@@ -56,7 +57,7 @@ private enum class TaskFilter {
 fun CalendarScreen(
     viewModel: CalendarViewModel,
     onNavigateHome: () -> Unit = {},
-    onAddTaskClick: () -> Unit = {}
+    onAddTask: (Task?) -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val viewMode by viewModel.viewMode.collectAsState()
@@ -180,7 +181,7 @@ fun CalendarScreen(
             floatingActionButton = {
                 if (viewMode != CalendarViewMode.YEAR) {
                     FloatingActionButton(
-                        onClick = onAddTaskClick,
+                        onClick = { onAddTask(null) },
                         containerColor = colorScheme.primary,
                         contentColor = colorScheme.onPrimary
                     ) {
@@ -202,8 +203,14 @@ fun CalendarScreen(
             ) {
                 when (viewMode) {
                     CalendarViewMode.YEAR -> YearView(viewModel = viewModel)
-                    CalendarViewMode.MONTH -> MonthView(viewModel = viewModel)
-                    CalendarViewMode.DAY -> DayView(viewModel = viewModel)
+                    CalendarViewMode.MONTH -> MonthView(
+                        viewModel = viewModel,
+                        onAddTask = onAddTask
+                    )
+                    CalendarViewMode.DAY -> DayView(
+                        viewModel = viewModel,
+                        onAddTask = onAddTask
+                    )
                 }
             }
         }
@@ -388,7 +395,10 @@ private fun isCurrentYearMonth(year: Int, month: Int): Boolean {
 
 // month view with calendar grid and month navigation
 @Composable
-fun MonthView(viewModel: CalendarViewModel) {
+fun MonthView(
+    viewModel: CalendarViewModel,
+    onAddTask: (Task?) -> Unit = {}
+) {
     val colorScheme = MaterialTheme.colorScheme
     val calendarDays by viewModel.calendarDays.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
@@ -492,9 +502,11 @@ fun MonthView(viewModel: CalendarViewModel) {
             ) {
                 items(tasksForSelectedDate.size, key = { tasksForSelectedDate[it].id }) { index ->
                     val task = tasksForSelectedDate[index]
-                    TaskItemRow(
+                    TaskItem(
                         task = task,
-                        onToggle = { viewModel.toggleTask(task) },
+                        checked = task.isChecked,
+                        onCheckedChange = { viewModel.toggleTask(task) },
+                        onEditTask = onAddTask,
                         onDelete = { viewModel.deleteTask(task) }
                     )
                     if (index < tasksForSelectedDate.lastIndex) {
@@ -674,7 +686,10 @@ fun CalendarDayCell(
 
 // day view with date strip and today's tasks, schedule cards
 @Composable
-fun DayView(viewModel: CalendarViewModel) {
+fun DayView(
+    viewModel: CalendarViewModel,
+    onAddTask: (Task?) -> Unit = {}
+) {
     val colorScheme = MaterialTheme.colorScheme
     val weekDates by viewModel.weekDates.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
@@ -709,7 +724,8 @@ fun DayView(viewModel: CalendarViewModel) {
                     onToggleExpand = { viewModel.toggleTodaysTasksExpanded() },
                     tasks = tasksForSelectedDate,
                     onTaskToggle = { viewModel.toggleTask(it) },
-                    onTaskDelete = { viewModel.deleteTask(it) }
+                    onTaskDelete = { viewModel.deleteTask(it) },
+                    onTaskEdit = onAddTask
                 )
             }
 
@@ -812,7 +828,8 @@ fun CollapsibleTaskCard(
     onToggleExpand: () -> Unit,
     tasks: List<Task>,
     onTaskToggle: (Task) -> Unit,
-    onTaskDelete: (Task) -> Unit
+    onTaskDelete: (Task) -> Unit,
+    onTaskEdit: (Task?) -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val rotationAngle by animateFloatAsState(
@@ -859,7 +876,6 @@ fun CollapsibleTaskCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    // Title row — icon now sits inline with the title text
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Outlined.CheckCircle,
@@ -876,7 +892,6 @@ fun CollapsibleTaskCard(
                         )
                     }
 
-                    // Filters only visible when expanded
                     AnimatedVisibility(
                         visible = isExpanded,
                         enter = expandVertically() + fadeIn(),
@@ -966,9 +981,11 @@ fun CollapsibleTaskCard(
                         }
                     } else {
                         filteredTasks.forEachIndexed { index, task ->
-                            TaskItemRow(
+                            TaskItem(
                                 task = task,
-                                onToggle = { onTaskToggle(task) },
+                                checked = task.isChecked,
+                                onCheckedChange = { onTaskToggle(task) },
+                                onEditTask = onTaskEdit,
                                 onDelete = { onTaskDelete(task) }
                             )
                             if (index < filteredTasks.lastIndex) {
@@ -1290,108 +1307,6 @@ private fun categoryEventColors(category: String, colorScheme: androidx.compose.
         "work" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
         "university", "mental health" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
         else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariant
-    }
-}
-
-@Composable
-fun TaskItemRow(
-    task: Task,
-    onToggle: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val context = LocalContext.current
-    val (chipBg, chipText) = when (task.category.uppercase()) {
-        "HEALTH" -> ChipHealthBg to ChipHealthText
-        "WORK" -> ChipWorkBg to ChipWorkText
-        "MENTAL HEALTH" -> ChipMentalBg to ChipMentalText
-        else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariant
-    }
-
-    var isExpanded by remember { mutableStateOf(false) }
-    val hasDescription = task.description.isNotBlank()
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colorScheme.background, RoundedCornerShape(8.dp))
-            .clickable(enabled = hasDescription) { isExpanded = !isExpanded }
-            .padding(12.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = task.isChecked,
-                onCheckedChange = { isChecked ->
-                    if (isChecked && !task.isChecked) {
-                        playCheckSound(context)
-                    }
-                    onToggle()
-                },
-                colors = CheckboxDefaults.colors(checkedColor = colorScheme.primary)
-            )
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = colorScheme.onSurface
-                    )
-                    
-                    if (task.isScheduled) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = "Scheduled task",
-                            tint = colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = task.category,
-                    fontSize = 10.sp,
-                    color = chipText,
-                    modifier = Modifier
-                        .background(chipBg, RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                )
-            }
-
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = colorScheme.error.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-
-        AnimatedVisibility(visible = isExpanded && hasDescription) {
-            Column {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = task.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .padding(start = 48.dp, end = 8.dp)
-                        .fillMaxWidth()
-                )
-            }
-        }
     }
 }
 

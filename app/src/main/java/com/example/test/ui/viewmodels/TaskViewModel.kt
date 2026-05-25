@@ -51,6 +51,12 @@ class TaskViewModel(private val taskRepository: TaskRepository) : ViewModel() {
         }
     }
 
+    fun updateTask(task: Task) {
+        viewModelScope.launch {
+            taskRepository.updateTask(task)
+        }
+    }
+
     fun toggleTask(task: Task) {
         viewModelScope.launch {
             taskRepository.toggleTask(task.id, !task.isChecked)

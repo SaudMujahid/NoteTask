@@ -35,7 +35,9 @@ import com.example.test.ui.components.SwipeOffTaskItem
 import com.example.test.ui.components.TaskCategories
 import com.example.test.ui.components.TaskItem
 import com.example.test.ui.components.TransferSheet
-import com.example.test.ui.theme.*
+import com.example.test.ui.theme.FilterBadgeBg
+import com.example.test.ui.theme.FilterBadgeBorder
+import com.example.test.ui.theme.BorderBlue
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -51,7 +53,7 @@ fun HomeScreen(
     isDarkTheme: Boolean = false,
     paletteIndex: Int = 0,
     onToggleDarkMode: () -> Unit = {},
-    onAddClick: () -> Unit = {},
+    onAddTask: (Task?) -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onNotesClick: () -> Unit = {},
     onTasksClick: () -> Unit = {},
@@ -199,6 +201,7 @@ fun HomeScreen(
                         }
                     },
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) },
+                    onEditTask = { onAddTask(it) },               // ← navigate to AddTaskScreen
                     isDarkTheme = isDarkTheme
                 )
             }
@@ -223,7 +226,7 @@ fun HomeScreen(
                     )
             )
             LargeFloatingActionButton(
-                onClick = onAddClick,
+                onClick = { onAddTask(null) },
                 shape = CircleShape,
                 containerColor = if (isDarkTheme) colorScheme.primary else Color.White,
                 contentColor   = if (isDarkTheme) colorScheme.onPrimary else colorScheme.primary,
@@ -252,20 +255,18 @@ fun HomeScreen(
         )
     }
 }
-
 // ── TaskListCard ─────────────────────────────────────────────────────────────
 
 @Composable
 fun TaskListCard(
     tasks: List<Task>,
     onCheckedChange: (Task) -> Unit,
+    onEditTask: (Task) -> Unit = {},
     emptyMessage: String,
     modifier: Modifier = Modifier,
     isDarkTheme: Boolean = false
 ) {
     val colorScheme = MaterialTheme.colorScheme
-
-    var expandedTaskId by remember { mutableStateOf<Long?>(null) }
 
     Card(
         modifier = modifier
@@ -276,7 +277,6 @@ fun TaskListCard(
         elevation = CardDefaults.cardElevation(4.dp),
         border = BorderStroke(
             1.dp,
-            // stronger border in dark compensates for the missing shadow
             colorScheme.primary.copy(alpha = if (isDarkTheme) 0.30f else 0.14f)
         )
     ) {
@@ -296,30 +296,15 @@ fun TaskListCard(
                 }
             } else {
                 tasks.forEachIndexed { index, task ->
-                    val taskIsExpanded = expandedTaskId == task.id
-                    val taskHasDescription = task.description.isNotBlank()
-
                     SwipeOffTaskItem(
                         checked = task.isChecked,
                         onCheckedChange = { onCheckedChange(task) }
                     ) { checked, onCheck ->
-                        val clickModifier = if (taskHasDescription) {
-                            Modifier.clickable {
-                                expandedTaskId = if (taskIsExpanded) null else task.id
-                            }
-                        } else {
-                            Modifier
-                        }
-
                         TaskItem(
-                            title = task.title,
-                            category = task.category,
+                            task = task,
                             checked = checked,
                             onCheckedChange = onCheck,
-                            isScheduled = task.isScheduled,
-                            modifier = clickModifier,
-                            description = task.description,
-                            isExpanded = taskIsExpanded
+                            onEditTask = onEditTask
                         )
                     }
                     if (index < tasks.lastIndex) {
@@ -334,7 +319,6 @@ fun TaskListCard(
         }
     }
 }
-
 // ── HomeHeader ───────────────────────────────────────────────────────────────
 
 @Composable

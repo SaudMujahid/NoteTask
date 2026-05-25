@@ -28,6 +28,7 @@ import java.util.*
 @Composable
 fun TodayTasksScreen(
     taskViewModel: TaskViewModel,
+    onAddTask: (Task?) -> Unit = {},
     onClose: () -> Unit
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
@@ -44,9 +45,6 @@ fun TodayTasksScreen(
     }
 
     val hasOverdue = overdueTasks.isNotEmpty()
-
-    // Track which task id is currently expanded
-    var expandedTaskId by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
         topBar = {
@@ -161,32 +159,15 @@ fun TodayTasksScreen(
                                 .verticalScroll(rememberScrollState())
                         ) {
                             todayTasks.forEachIndexed { index, task ->
-                                // Compute expansion state for THIS specific task
-                                val taskIsExpanded = expandedTaskId == task.id
-                                val taskHasDescription = task.description.isNotBlank()
-
                                 SwipeOffTaskItem(
                                     checked = task.isChecked,
                                     onCheckedChange = { taskViewModel.toggleTask(task) }
                                 ) { checked, onCheck ->
-                                    // Determine click modifier based on whether description exists
-                                    val clickModifier = if (taskHasDescription) {
-                                        Modifier.clickable {
-                                            expandedTaskId = if (taskIsExpanded) null else task.id
-                                        }
-                                    } else {
-                                        Modifier
-                                    }
-
                                     TaskItem(
-                                        title = task.title,
-                                        category = task.category,
+                                        task = task,
                                         checked = checked,
                                         onCheckedChange = onCheck,
-                                        isScheduled = task.isScheduled,
-                                        modifier = clickModifier,
-                                        description = task.description,
-                                        isExpanded = taskIsExpanded
+                                        onEditTask = onAddTask
                                     )
                                 }
                                 if (index < todayTasks.lastIndex) {
@@ -258,31 +239,16 @@ fun TodayTasksScreen(
                                 }
                                 val dateText = parsedDate?.let { displayFormatter.format(it) } ?: task.date
 
-                                // Compute expansion state for THIS specific task
-                                val taskIsExpanded = expandedTaskId == task.id
-                                val taskHasDescription = task.description.isNotBlank()
-
                                 SwipeOffTaskItem(
                                     checked = task.isChecked,
                                     onCheckedChange = { taskViewModel.toggleTask(task) }
                                 ) { checked, onCheck ->
-                                    // Determine click modifier
-                                    val clickModifier = if (taskHasDescription) {
-                                        Modifier.clickable {
-                                            expandedTaskId = if (taskIsExpanded) null else task.id
-                                        }
-                                    } else {
-                                        Modifier
-                                    }
-
                                     OverdueTaskRow(
                                         task = task,
                                         dateText = dateText,
                                         checked = checked,
                                         onCheckedChange = onCheck,
-                                        modifier = clickModifier,
-                                        description = task.description,
-                                        isExpanded = taskIsExpanded
+                                        onEditTask = onAddTask
                                     )
                                 }
 
@@ -313,13 +279,15 @@ private fun OverdueTaskRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     description: String? = null,
-    isExpanded: Boolean = false
+    isExpanded: Boolean = false,
+    onEditTask: (Task) -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
 
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .clickable { onEditTask(task) } // allow editing overdue tasks too
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(
