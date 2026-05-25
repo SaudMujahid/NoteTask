@@ -4,6 +4,7 @@ import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -41,6 +43,7 @@ fun AddTaskScreen(
     existingTask: Task? = null
 ) {
     val cs = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
 
     // ── Pre-fill helpers ─────────────────────────────────────────────
@@ -135,7 +138,8 @@ fun AddTaskScreen(
                 Text(
                     text = if (existingTask == null) "New Task" else "Edit Task",
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Black,
+                    color = if (isDark) Color.White else cs.onBackground
                 )
             }
             item { Spacer(Modifier.height(24.dp)) }
@@ -198,7 +202,8 @@ fun AddTaskScreen(
                     "Category",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 10.dp)
+                    modifier = Modifier.padding(bottom = 10.dp),
+                    color = if (isDark) Color.White else cs.onBackground
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(Categories) { cat ->
@@ -213,7 +218,7 @@ fun AddTaskScreen(
                             Text(
                                 cat,
                                 fontSize = 13.sp,
-                                color = if (selected) cs.onPrimary else cs.onSurfaceVariant
+                                color = if (selected) (if (isDark) Color.White else cs.onPrimary) else cs.onSurfaceVariant
                             )
                         }
                     }
@@ -227,7 +232,8 @@ fun AddTaskScreen(
                     "Date & Time",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 10.dp)
+                    modifier = Modifier.padding(bottom = 10.dp),
+                    color = if (isDark) Color.White else cs.onBackground
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Surface(
@@ -241,11 +247,11 @@ fun AddTaskScreen(
                             modifier = Modifier.padding(horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(dateDisplay, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                            Text(dateDisplay, fontSize = 13.sp, modifier = Modifier.weight(1f), color = if (isDark) Color.White else cs.onSurface)
                             Icon(
                                 Icons.Default.DateRange,
                                 null,
-                                tint = cs.primary,
+                                tint = if (isDark) Color.White else cs.primary,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -273,7 +279,8 @@ fun AddTaskScreen(
                             Text(
                                 notificationMinutes?.let { formatMinutes(it) } ?: "Set Time",
                                 fontSize = 13.sp,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                color = if (notificationMinutes != null) (if (isDark) Color.White else cs.onPrimaryContainer) else if (isDark) Color.White else cs.onSurface
                             )
                             if (notificationMinutes != null) {
                                 Icon(
@@ -281,13 +288,15 @@ fun AddTaskScreen(
                                     null,
                                     modifier = Modifier
                                         .size(16.dp)
-                                        .clickable { notificationMinutes = null }
+                                        .clickable { notificationMinutes = null },
+                                    tint = if (isDark) Color.White else cs.onPrimaryContainer
                                 )
                             } else {
                                 Icon(
                                     Icons.Outlined.AccessTime,
                                     null,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (isDark) Color.White else cs.primary
                                 )
                             }
                         }
@@ -304,11 +313,11 @@ fun AddTaskScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Schedule task", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Schedule task", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (isDark) Color.White else cs.onBackground)
                         Text(
                             "Show this task as a time block on the calendar",
                             fontSize = 11.sp,
-                            color = cs.onSurface.copy(alpha = 0.38f)
+                            color = (if (isDark) Color.White else cs.onSurface).copy(alpha = 0.38f)
                         )
                     }
                     Switch(checked = isScheduled, onCheckedChange = { isScheduled = it })
@@ -395,7 +404,11 @@ fun AddTaskScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = title.isNotBlank()
+                    enabled = title.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = cs.primary,
+                        contentColor = if (isDark) Color.White else cs.onPrimary
+                    )
                 ) {
                     Text(
                         if (existingTask == null) "Save" else "Update",

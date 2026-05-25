@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -27,6 +28,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -65,17 +67,20 @@ fun CalendarScreen(
     val scope = rememberCoroutineScope()
 
 
+    val isDark = isSystemInDarkTheme()
+    val whiteInDark = if (isDark) Color.White else colorScheme.onSurface
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContentColor = BorderBlue
+                drawerContentColor = colorScheme.primary
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(BackgroundGray.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
+                        .background(colorScheme.surfaceVariant.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -84,13 +89,13 @@ fun CalendarScreen(
                         text = "Calendar Views",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = BorderBlue
+                        color = if (isDark) Color.White else colorScheme.primary
                     )
                     IconButton(onClick = { scope.launch { drawerState.close() } }) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close menu",
-                            tint = BorderBlue
+                            tint = if (isDark) Color.White else colorScheme.primary
                         )
                     }
                 }
@@ -109,12 +114,12 @@ fun CalendarScreen(
                         scope.launch { drawerState.close() }
                     },
                     colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = PrimaryBlue.copy(alpha = 0.18f),
+                        selectedContainerColor = colorScheme.primary.copy(alpha = 0.18f),
                         unselectedContainerColor = Color.Transparent,
-                        selectedTextColor = BorderBlue,
-                        unselectedTextColor = BorderBlue.copy(alpha = 0.8f),
-                        selectedIconColor = PrimaryBlue,
-                        unselectedIconColor = BorderBlue.copy(alpha = 0.8f)
+                        selectedTextColor = if (isDark) Color.White else colorScheme.primary,
+                        unselectedTextColor = whiteInDark.copy(alpha = 0.8f),
+                        selectedIconColor = if (isDark) Color.White else colorScheme.primary,
+                        unselectedIconColor = whiteInDark.copy(alpha = 0.8f)
                     ),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
@@ -133,12 +138,12 @@ fun CalendarScreen(
                         scope.launch { drawerState.close() }
                     },
                     colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = PrimaryBlue.copy(alpha = 0.18f),
+                        selectedContainerColor = colorScheme.primary.copy(alpha = 0.18f),
                         unselectedContainerColor = Color.Transparent,
-                        selectedTextColor = BorderBlue,
-                        unselectedTextColor = BorderBlue.copy(alpha = 0.8f),
-                        selectedIconColor = PrimaryBlue,
-                        unselectedIconColor = BorderBlue.copy(alpha = 0.8f)
+                        selectedTextColor = if (isDark) Color.White else colorScheme.primary,
+                        unselectedTextColor = whiteInDark.copy(alpha = 0.8f),
+                        selectedIconColor = if (isDark) Color.White else colorScheme.primary,
+                        unselectedIconColor = whiteInDark.copy(alpha = 0.8f)
                     ),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
@@ -157,12 +162,12 @@ fun CalendarScreen(
                         scope.launch { drawerState.close() }
                     },
                     colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = PrimaryBlue.copy(alpha = 0.18f),
+                        selectedContainerColor = colorScheme.primary.copy(alpha = 0.18f),
                         unselectedContainerColor = Color.Transparent,
-                        selectedTextColor = BorderBlue,
-                        unselectedTextColor = BorderBlue.copy(alpha = 0.8f),
-                        selectedIconColor = PrimaryBlue,
-                        unselectedIconColor = BorderBlue.copy(alpha = 0.8f)
+                        selectedTextColor = if (isDark) Color.White else colorScheme.primary,
+                        unselectedTextColor = whiteInDark.copy(alpha = 0.8f),
+                        selectedIconColor = if (isDark) Color.White else colorScheme.primary,
+                        unselectedIconColor = whiteInDark.copy(alpha = 0.8f)
                     ),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
@@ -571,13 +576,11 @@ fun CalendarDayCell(
         else -> colorScheme.surface
     }
 
+    val isDark = isSystemInDarkTheme()
     val textColor = when {
         isSelected -> colorScheme.onPrimary
-        !day.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-        scheduledTasks.isNotEmpty() && incompleteScheduledCount > 0 -> colorScheme.error
-        scheduledTasks.isNotEmpty() && completeScheduledCount > 0 && incompleteScheduledCount == 0 -> colorScheme.tertiary
-        day.isToday -> colorScheme.primary
-        else -> colorScheme.onSurface
+        !day.isCurrentMonth -> (if (isDark) Color.White else colorScheme.onSurfaceVariant).copy(alpha = 0.4f)
+        else -> if (isDark) Color.White else colorScheme.onSurface
     }
 
     Box(
@@ -625,7 +628,7 @@ fun CalendarDayCell(
                                 .clip(RoundedCornerShape(1.dp))
                                 .background(
                                     if (isSelected) colorScheme.onPrimary 
-                                    else colorScheme.error
+                                    else if (isDark) Color.White else colorScheme.error
                                 )
                         )
                         Spacer(modifier = Modifier.width(2.dp))
@@ -640,7 +643,7 @@ fun CalendarDayCell(
                                 .clip(RoundedCornerShape(1.dp))
                                 .background(
                                     if (isSelected) colorScheme.onPrimary 
-                                    else colorScheme.tertiary
+                                    else if (isDark) Color.White else colorScheme.tertiary
                                 )
                         )
                     }
@@ -662,10 +665,10 @@ fun CalendarDayCell(
                                 .clip(CircleShape)
                                 .background(
                                     when (task.category.uppercase()) {
-                                        "HEALTH" -> ChipHealthText
-                                        "WORK" -> ChipWorkText
-                                        "MENTAL HEALTH" -> ChipMentalText
-                                        else -> colorScheme.onSurfaceVariant
+                                        "HEALTH" -> if (isDark) Color.White else colorScheme.primary
+                                        "WORK" -> if (isDark) Color.White else colorScheme.secondary
+                                        "MENTAL HEALTH" -> if (isDark) Color.White else colorScheme.tertiary
+                                        else -> if (isDark) Color.White else colorScheme.onSurfaceVariant
                                     }
                                 )
                         )
@@ -674,7 +677,7 @@ fun CalendarDayCell(
                         Text(
                             text = "+",
                             fontSize = 8.sp,
-                            color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant,
+                            color = if (isSelected) colorScheme.onPrimary else if (isDark) Color.White else colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 2.dp)
                         )
                     }
@@ -832,6 +835,7 @@ fun CollapsibleTaskCard(
     onTaskEdit: (Task?) -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
         label = "rotation"
@@ -902,9 +906,9 @@ fun CollapsibleTaskCard(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 StatusBadge(
                                     text = "pending",
-                                    backgroundColor = PendingBadgeBg,
-                                    borderColor = PendingBadgeBorder,
-                                    contentColor = PendingBadgeBorder,
+                                    backgroundColor = colorScheme.errorContainer.copy(alpha = 0.4f),
+                                    borderColor = colorScheme.error,
+                                    contentColor = if (isDark) Color.White else colorScheme.error,
                                     count = pendingTasks,
                                     selected = selectedFilter == TaskFilter.PENDING,
                                     onClick = {
@@ -914,9 +918,9 @@ fun CollapsibleTaskCard(
                                 )
                                 StatusBadge(
                                     text = "completed",
-                                    backgroundColor = CompletedBadgeBg,
-                                    borderColor = CompletedBadgeBorder,
-                                    contentColor = CompletedBadgeBorder,
+                                    backgroundColor = colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                                    borderColor = colorScheme.tertiary,
+                                    contentColor = if (isDark) Color.White else colorScheme.tertiary,
                                     count = completedTasks,
                                     selected = selectedFilter == TaskFilter.COMPLETED,
                                     onClick = {
@@ -938,7 +942,7 @@ fun CollapsibleTaskCard(
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowUp,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = colorScheme.onSurfaceVariant,
+                    tint = if (isDark) Color.White else colorScheme.onSurfaceVariant,
                     modifier = Modifier.rotate(rotationAngle)
                 )
             }
@@ -975,7 +979,7 @@ fun CollapsibleTaskCard(
                                         "No $selectedCategory tasks for this day"
                                     }
                                 },
-                                color = colorScheme.onSurfaceVariant,
+                                color = if (isDark) Color.White.copy(alpha = 0.7f) else colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -992,7 +996,7 @@ fun CollapsibleTaskCard(
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 8.dp),
                                     thickness = 1.dp,
-                                    color = BorderBlue.copy(alpha = 0.7f)
+                                    color = colorScheme.outline.copy(alpha = 0.3f)
                                 )
                             }
                         }
@@ -1302,11 +1306,13 @@ private fun formatMinutesOfDay(minutes: Int): String {
 }
 
 private fun categoryEventColors(category: String, colorScheme: androidx.compose.material3.ColorScheme): Pair<Color, Color> {
+    val isDark = colorScheme.surface.luminance() < 0.5f
+
     return when (category.trim().lowercase()) {
-        "personal", "health" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
-        "work" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
-        "university", "mental health" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
-        else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariant
+        "personal", "health" -> colorScheme.primaryContainer to (if (isDark) Color.White else colorScheme.onPrimaryContainer)
+        "work" -> colorScheme.secondaryContainer to (if (isDark) Color.White else colorScheme.onSecondaryContainer)
+        "university", "mental health" -> colorScheme.tertiaryContainer to (if (isDark) Color.White else colorScheme.onTertiaryContainer)
+        else -> colorScheme.surfaceVariant to (if (isDark) Color.White else colorScheme.onSurfaceVariant)
     }
 }
 

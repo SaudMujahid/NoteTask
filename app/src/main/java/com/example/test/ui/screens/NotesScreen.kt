@@ -49,6 +49,7 @@ fun NotesScreen(
     var showSearch by remember { mutableStateOf(false) }
     var showFabMenu by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
     var lockedNoteId by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val profileRepo = remember { ProfileRepository.getInstance(context) }
@@ -133,7 +134,7 @@ fun NotesScreen(
                     }
                 }
                 FloatingActionButton(onClick = { showFabMenu = !showFabMenu }, containerColor = colorScheme.primary) {
-                    Icon(if (showFabMenu) Icons.Default.Close else Icons.Default.Add, null)
+                    Icon(if (showFabMenu) Icons.Default.Close else Icons.Default.Add, null, tint = if (isDark) Color.White else colorScheme.onPrimary)
                 }
             }
         }
@@ -185,17 +186,21 @@ fun NotesScreen(
 private fun FabOption(label: String, onClick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Surface(shape = RoundedCornerShape(8.dp), shadowElevation = 4.dp) {
-            Text(label, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontWeight = FontWeight.Medium)
+            Text(label, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontWeight = FontWeight.Medium, color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface)
         }
         Spacer(Modifier.width(8.dp))
-        SmallFloatingActionButton(onClick = onClick) { Icon(Icons.Default.Edit, null) }
+        SmallFloatingActionButton(onClick = onClick) { Icon(Icons.Default.Edit, null, tint = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onPrimary) }
     }
 }
 
 @Composable
 private fun NoteCard(note: Note, onClick: () -> Unit, onPin: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
     val bgColor = if (note.color != "DEFAULT") NoteColorMap[note.color] ?: colorScheme.surface else colorScheme.surface
+    val isColored = note.color != "DEFAULT"
+    val contentColor = if (isColored) Color(0xFF1A1A1A) else (if (isDark) Color.White else colorScheme.onSurface)
+    
     val dateStr = SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(note.dateModified))
     val typeEmoji = when (note.type) { "JOURNAL" -> "📔"; "LIST" -> "✅"; else -> "📝" }
     Card(
@@ -211,17 +216,17 @@ private fun NoteCard(note: Note, onClick: () -> Unit, onPin: () -> Unit) {
                         imageVector = Icons.Default.Lock,
                         contentDescription = "Locked",
                         modifier = Modifier.size(14.dp),
-                        tint = colorScheme.error
+                        tint = if (isDark && !isColored) Color.White else colorScheme.error
                     )
                 }
                 Text(typeEmoji, fontSize = 14.sp)
-                if (note.isPinned) Icon(Icons.Default.PushPin, null, modifier = Modifier.size(14.dp), tint = colorScheme.primary)
+                if (note.isPinned) Icon(Icons.Default.PushPin, null, modifier = Modifier.size(14.dp), tint = if (isDark && !isColored) Color.White else colorScheme.primary)
             }
-            if (note.title.isNotEmpty()) Text(note.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (note.content.isNotEmpty()) Text(note.content, fontSize = 13.sp, maxLines = 6, overflow = TextOverflow.Ellipsis)
+            if (note.title.isNotEmpty()) Text(note.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, color = contentColor)
+            if (note.content.isNotEmpty()) Text(note.content, fontSize = 13.sp, maxLines = 6, overflow = TextOverflow.Ellipsis, color = contentColor.copy(alpha = 0.8f))
             if (note.stickers.isNotEmpty()) Text(note.stickers.split(",").take(5).joinToString(" "), fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
-            Text(dateStr, fontSize = 11.sp)
+            Text(dateStr, fontSize = 11.sp, color = contentColor.copy(alpha = 0.6f))
         }
     }
 }

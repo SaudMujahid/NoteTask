@@ -81,11 +81,12 @@ fun NoteEditorScreen(
     var currentSaveSource by remember { mutableStateOf(SaveSource.MANUAL) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val isDark = isSystemInDarkTheme()
     val isColored = color != "DEFAULT"
     val bgColor = if (isColored) NoteColorMap[color] ?: colorScheme.background
     else colorScheme.background
-    val onBgColor = if (isColored) Color(0xFF1A1A1A) else colorScheme.onBackground
-    val onBgVariant = if (isColored) Color(0xFF555555) else colorScheme.onSurfaceVariant
+    val onBgColor = if (isColored) Color(0xFF1A1A1A) else (if (isDark) Color.White else colorScheme.onBackground)
+    val onBgVariant = if (isColored) Color(0xFF555555) else (if (isDark) Color.White.copy(alpha = 0.7f) else colorScheme.onSurfaceVariant)
 
     val photoPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents()
@@ -174,7 +175,7 @@ fun NoteEditorScreen(
                         when (type) { "JOURNAL" -> "📔 Journal"; "LIST" -> "✅ List"; else -> "📝 Note" },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
-                        color = colorScheme.primary
+                        color = if (isDark) Color.White else colorScheme.primary
                     )
                 },
                 actions = {
@@ -182,21 +183,21 @@ fun NoteEditorScreen(
                         Icon(
                             imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Save,
                             contentDescription = if (isSaved) "Saved" else "Save",
-                            tint = if (isSaved || isSaving) colorScheme.primary else onBgColor
+                            tint = if (isSaved || isSaving) (if (isDark) Color.White else colorScheme.primary) else onBgColor
                         )
                     }
                     IconButton(onClick = { isPinned = !isPinned; markUnsaved() }) {
                         Icon(
                             Icons.Default.PushPin,
                             null,
-                            tint = if (isPinned) colorScheme.primary else onBgVariant
+                            tint = if (isPinned) (if (isDark) Color.White else colorScheme.primary) else onBgVariant
                         )
                     }
                     IconButton(onClick = { isLocked = !isLocked; markUnsaved() }) {
                         Icon(
                             if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
                             null,
-                            tint = if (isLocked) colorScheme.error else onBgVariant
+                            tint = if (isLocked) (if (isDark) Color.White else colorScheme.error) else onBgVariant
                         )
                     }
                     IconButton(onClick = { showColorPicker = !showColorPicker }) {
@@ -215,7 +216,7 @@ fun NoteEditorScreen(
                             existingNote?.let { noteViewModel.deleteNote(it) }
                             onBack()
                         }) {
-                            Icon(Icons.Default.Delete, null, tint = colorScheme.error)
+                            Icon(Icons.Default.Delete, null, tint = if (isDark) Color.White else colorScheme.error)
                         }
                     }
                 },
@@ -245,7 +246,7 @@ fun NoteEditorScreen(
                                 .background(displayColor)
                                 .border(
                                     if (color == key) 3.dp else 1.dp,
-                                    if (color == key) colorScheme.primary else colorScheme.outline,
+                                    if (color == key) (if (isDark) Color.White else colorScheme.primary) else colorScheme.outline,
                                     CircleShape
                                 )
                                 .clickable { color = key; markUnsaved() }
@@ -317,7 +318,7 @@ fun NoteEditorScreen(
                                 updated[index] = item.copy(isChecked = checked)
                                 listItems = updated
                                 markUnsaved()
-                            }, colors = CheckboxDefaults.colors(checkedColor = colorScheme.primary, uncheckedColor = onBgVariant))
+                            }, colors = CheckboxDefaults.colors(checkedColor = if (isDark) Color.White else colorScheme.primary, uncheckedColor = onBgVariant))
                             Spacer(Modifier.width(8.dp))
                             BasicTextField(value = item.text, onValueChange = { newText ->
                                 val updated = listItems.toMutableList()
@@ -336,13 +337,13 @@ fun NoteEditorScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Add, null, tint = colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Add, null, tint = if (isDark) Color.White else colorScheme.primary, modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(8.dp))
                         BasicTextField(value = newItemText, onValueChange = { newItemText = it }, modifier = Modifier.weight(1f), textStyle = TextStyle(fontSize = 16.sp, color = onBgColor), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { if (newItemText.isNotBlank()) { listItems = listItems + ListItem(text = newItemText); newItemText = ""; markUnsaved() } }), decorationBox = { inner ->
                             if (newItemText.isEmpty()) Text("Add item and press Done...", color = onBgVariant, fontSize = 16.sp)
                             inner()
                         })
-                        if (newItemText.isNotBlank()) IconButton(onClick = { listItems = listItems + ListItem(text = newItemText); newItemText = ""; markUnsaved() }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Check, null, tint = colorScheme.primary) }
+                        if (newItemText.isNotBlank()) IconButton(onClick = { listItems = listItems + ListItem(text = newItemText); newItemText = ""; markUnsaved() }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Check, null, tint = if (isDark) Color.White else colorScheme.primary) }
                     }
                 }
                 else -> {

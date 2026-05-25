@@ -36,6 +36,8 @@ fun DrawerMenu(
     onProfileClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = isDarkTheme
+    val textColor = if (isDark) Color.White else colorScheme.onSurface
     var showPalettePicker by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
@@ -109,7 +111,7 @@ fun DrawerMenu(
                         text = if (firstName.isBlank()) "Hello!" else "Hi, $firstName 👋",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
-                        color = colorScheme.onSurface
+                        color = textColor
                     )
                     Spacer(Modifier.height(8.dp))
                     Box(
@@ -124,8 +126,8 @@ fun DrawerMenu(
                     DrawerMenuItem(
                         icon = Icons.Default.Person,
                         label = "Profile",
-                        iconTint = colorScheme.primary,
-                        textColor = colorScheme.onSurface,
+                        iconTint = if (isDark) Color.White else colorScheme.primary,
+                        textColor = textColor,
                         onClick = {
                             onClose()
                             onProfileClick()
@@ -138,8 +140,8 @@ fun DrawerMenu(
                     DrawerMenuItem(
                         label = if (isDarkTheme) "Light Mode" else "Dark Mode",
                         icon = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        iconTint = colorScheme.primary,
-                        textColor = colorScheme.onSurface,
+                        iconTint = if (isDark) Color.White else colorScheme.primary,
+                        textColor = textColor,
                         onClick = {
                             onToggleDarkMode()
                             onClose()
@@ -152,8 +154,8 @@ fun DrawerMenu(
                     DrawerMenuItem(
                         label = "Colour Scheme",
                         icon = Icons.Default.Palette,
-                        iconTint = colorScheme.primary,
-                        textColor = colorScheme.onSurface,
+                        iconTint = if (isDark) Color.White else colorScheme.primary,
+                        textColor = textColor,
                         onClick = { showPalettePicker = !showPalettePicker }
                     )
                     AnimatedVisibility(
@@ -213,8 +215,8 @@ fun DrawerMenu(
                     DrawerMenuItem(
                         icon = Icons.Default.BarChart,
                         label = "Progress",
-                        iconTint = colorScheme.primary,
-                        textColor = colorScheme.onSurface,
+                        iconTint = if (isDark) Color.White else colorScheme.primary,
+                        textColor = textColor,
                         onClick = {
                             onClose()
                             onStatsClick()
@@ -227,8 +229,8 @@ fun DrawerMenu(
                     DrawerMenuItem(
                         icon = Icons.Default.SwapHoriz,
                         label = "Transfer",
-                        iconTint = colorScheme.primary,
-                        textColor = colorScheme.onSurface,
+                        iconTint = if (isDark) Color.White else colorScheme.primary,
+                        textColor = textColor,
                         onClick = {
                             onClose()
                             onTransferClick()

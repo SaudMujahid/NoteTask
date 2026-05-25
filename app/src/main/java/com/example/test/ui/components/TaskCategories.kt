@@ -1,6 +1,7 @@
 package com.example.test.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,12 +29,15 @@ object TaskCategories {
     @Composable
     fun colorsFor(category: String): Pair<Color, Color> {
         val cs = MaterialTheme.colorScheme
-        return when (category.trim().lowercase()) {
+        val isDark = cs.surface.luminance() < 0.5f
+
+        val (bg, onBg) = when (category.trim().lowercase()) {
             "personal"   -> cs.primaryContainer   to cs.onPrimaryContainer
             "work"       -> cs.secondaryContainer to cs.onSecondaryContainer
             "university" -> cs.tertiaryContainer  to cs.onTertiaryContainer
             else         -> cs.surfaceVariant     to cs.onSurfaceVariant
         }
+        return bg to (if (isDark) Color.White else onBg)
     }
 }
 

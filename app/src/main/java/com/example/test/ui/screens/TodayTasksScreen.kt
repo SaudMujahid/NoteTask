@@ -2,6 +2,7 @@ package com.example.test.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,6 +35,7 @@ fun TodayTasksScreen(
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val cs = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
 
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
     val todayLabel = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date()) }
@@ -61,7 +64,7 @@ fun TodayTasksScreen(
                             "Today · $todayLabel",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            color = cs.primary,
+                            color = if (isDark) Color.White else cs.primary,
                             letterSpacing = 0.3.sp
                         )
                     }
@@ -123,7 +126,7 @@ fun TodayTasksScreen(
                                 "${todayTasks.size}",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = cs.primary
+                                color = if (isDark) Color.White else cs.primary
                             )
                         }
                     }
@@ -206,7 +209,7 @@ fun TodayTasksScreen(
                                 "Overdue",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = cs.error
+                                color = if (isDark) Color.White else cs.error
                             )
                             Box(
                                 modifier = Modifier
@@ -218,7 +221,7 @@ fun TodayTasksScreen(
                                     "${overdueTasks.size}",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = cs.error
+                                    color = if (isDark) Color.White else cs.error
                                 )
                             }
                         }
@@ -283,6 +286,7 @@ private fun OverdueTaskRow(
     onEditTask: (Task) -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
 
     Column(
         modifier = modifier
@@ -303,7 +307,7 @@ private fun OverdueTaskRow(
                     checked = checked,
                     onCheckedChange = onCheckedChange,
                     colors = CheckboxDefaults.colors(
-                        checkedColor = cs.error,
+                        checkedColor = if (isSystemInDarkTheme()) Color.White else cs.error,
                         uncheckedColor = cs.onSurfaceVariant
                     )
                 )
@@ -313,7 +317,7 @@ private fun OverdueTaskRow(
                         text = task.title,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
-                        color = if (checked) cs.onSurface.copy(alpha = 0.4f) else cs.onSurface
+                        color = if (checked) (if (isSystemInDarkTheme()) Color.White else cs.onSurface).copy(alpha = 0.4f) else (if (isSystemInDarkTheme()) Color.White else cs.onSurface)
                     )
                     Spacer(Modifier.height(4.dp))
                     CategoryChip(category = task.category)
@@ -332,7 +336,7 @@ private fun OverdueTaskRow(
                     text = dateText,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = cs.error
+                    color = if (isSystemInDarkTheme()) Color.White else cs.error
                 )
             }
         }

@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -53,6 +54,7 @@ fun StatsScreen(
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val cs = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
     var period by remember { mutableStateOf(StatsPeriod.WEEK) }
     val sdf = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
@@ -152,14 +154,14 @@ fun StatsScreen(
         PeriodToggle(selected = period, onSelect = { period = it }, modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
         Spacer(Modifier.height(22.dp))
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SummaryCard("Total", "$total", cs.primary, Modifier.weight(1f))
-            SummaryCard("Done", "$completed", CompletedGreen, Modifier.weight(1f))
-            SummaryCard("Pending", "$pending", PendingAmber, Modifier.weight(1f))
+            SummaryCard("Total", "$total", if (isDark) Color.White else cs.primary, Modifier.weight(1f))
+            SummaryCard("Done", "$completed", if (isDark) Color.White else CompletedGreen, Modifier.weight(1f))
+            SummaryCard("Pending", "$pending", if (isDark) Color.White else PendingAmber, Modifier.weight(1f))
         }
         Spacer(Modifier.height(30.dp))
         SectionLabel("Completion Rate", Modifier.padding(horizontal = 16.dp))
         Spacer(Modifier.height(16.dp))
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AnimatedDonutChart(rate = rate, completed = completed, total = total) }
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AnimatedDonutChart(rate = rate, completed = completed, total = total, isDark = isDark) }
         Spacer(Modifier.height(36.dp))
 
         // Conditional section: day-by-day for week, week-by-week for month
@@ -212,17 +214,18 @@ private fun PeriodToggle(selected: StatsPeriod, onSelect: (StatsPeriod) -> Unit,
 
 @Composable
 private fun SummaryCard(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    val isDark = isSystemInDarkTheme()
     Card(modifier = modifier, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.11f))) {
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = value, fontWeight = FontWeight.Black, fontSize = 30.sp, color = color)
             Spacer(Modifier.height(2.dp))
-            Text(text = label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f))
+            Text(text = label, fontSize = 11.sp, color = (if (isDark) Color.White else MaterialTheme.colorScheme.onSurface).copy(alpha = 0.55f))
         }
     }
 }
 
 @Composable
-private fun AnimatedDonutChart(rate: Float, completed: Int, total: Int) {
+private fun AnimatedDonutChart(rate: Float, completed: Int, total: Int, isDark: Boolean = false) {
     val cs = MaterialTheme.colorScheme
     val trackColor = cs.primary.copy(alpha = 0.12f)
     val animRate by animateFloatAsState(targetValue = rate, animationSpec = tween(durationMillis = 1400, easing = FastOutSlowInEasing))
@@ -235,8 +238,8 @@ private fun AnimatedDonutChart(rate: Float, completed: Int, total: Int) {
             if (animRate > 0.005f) drawArc(color = ringColor, startAngle = -90f, sweepAngle = 360f * animRate, useCenter = false, topLeft = Offset(center.x - radius, center.y - radius), size = Size(radius * 2f, radius * 2f), style = Stroke(width = stroke, cap = StrokeCap.Round))
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "${(animRate * 100).toInt()}%", fontWeight = FontWeight.Black, fontSize = 40.sp, color = if (rate > 0f) ringColor else cs.onSurface.copy(alpha = 0.3f))
-            Text(text = "$completed / $total tasks", fontSize = 13.sp, color = cs.onSurface.copy(alpha = 0.50f))
+            Text(text = "${(animRate * 100).toInt()}%", fontWeight = FontWeight.Black, fontSize = 40.sp, color = if (rate > 0f) (if (isDark) Color.White else ringColor) else cs.onSurface.copy(alpha = 0.3f))
+            Text(text = "$completed / $total tasks", fontSize = 13.sp, color = (if (isDark) Color.White else cs.onSurface).copy(alpha = 0.50f))
         }
     }
 }
@@ -313,14 +316,14 @@ private fun StackedBar(
             text = data.label,
             fontSize = if (data.isHighlighted) 13.sp else 12.sp,
             fontWeight = if (data.isHighlighted) FontWeight.Bold else FontWeight.Normal,
-            color = if (data.isHighlighted) primaryColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            color = if (data.isHighlighted) (if (isSystemInDarkTheme()) Color.White else primaryColor) else (if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface).copy(alpha = 0.5f)
         )
         data.subLabel?.let {
             Spacer(Modifier.height(2.dp))
             Text(
                 text = it,
                 fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                color = (if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface).copy(alpha = 0.45f)
             )
         }
         if (data.isHighlighted) {

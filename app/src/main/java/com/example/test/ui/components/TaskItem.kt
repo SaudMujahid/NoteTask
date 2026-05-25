@@ -1,6 +1,7 @@
 package com.example.test.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +46,9 @@ fun TaskItem(
     onDelete: (() -> Unit)? = null
 ) {
     val cs = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
+    val whiteInDark = if (isDark) Color.White else cs.onSurface
+    val primaryInDark = if (isDark) Color.White else cs.primary
 
     // Internal sheet state
     var showSheet by remember { mutableStateOf(false) }
@@ -85,7 +90,7 @@ fun TaskItem(
                         text = task.title,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = cs.onSurface,
+                        color = whiteInDark,
                         modifier = Modifier.weight(1f)
                     )
                     CategoryChip(task.category)
@@ -98,14 +103,14 @@ fun TaskItem(
                         Icon(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = null,
-                            tint = cs.primary,
+                            tint = primaryInDark,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             text = timeLabel,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = cs.primary
+                            color = primaryInDark
                         )
                     }
                 }
@@ -119,8 +124,8 @@ fun TaskItem(
                 Text(
                     text = if (hasDescription) task.description else "No description",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (hasDescription) cs.onSurface.copy(alpha = 0.85f)
-                    else cs.onSurface.copy(alpha = 0.35f),
+                    color = if (hasDescription) whiteInDark.copy(alpha = 0.85f)
+                    else whiteInDark.copy(alpha = 0.35f),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { showSheet = false; onEditTask(task) }
@@ -159,7 +164,7 @@ fun TaskItem(
             onCheckedChange = onCheckedChange,
             colors = CheckboxDefaults.colors(
                 uncheckedColor = cs.outline,
-                checkedColor = cs.primary
+                checkedColor = primaryInDark
             ),
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp)
         )
@@ -178,7 +183,7 @@ fun TaskItem(
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (checked) cs.onSurface.copy(alpha = 0.4f) else cs.onSurface,
+                    color = if (checked) whiteInDark.copy(alpha = 0.4f) else whiteInDark,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -190,14 +195,14 @@ fun TaskItem(
                             Icon(
                                 imageVector = Icons.Default.Schedule,
                                 contentDescription = null,
-                                tint = cs.primary,
+                                tint = primaryInDark,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = timeLabel,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = cs.primary
+                                color = primaryInDark
                             )
                         }
                         Spacer(Modifier.height(4.dp))
@@ -224,7 +229,7 @@ fun TaskItem(
             Text(
                 text = subtask,
                 style = MaterialTheme.typography.bodyMedium,
-                color = cs.onSurfaceVariant
+                color = if (isDark) Color.White.copy(alpha = 0.7f) else cs.onSurfaceVariant
             )
         }
     }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -35,9 +36,6 @@ import com.example.test.ui.components.SwipeOffTaskItem
 import com.example.test.ui.components.TaskCategories
 import com.example.test.ui.components.TaskItem
 import com.example.test.ui.components.TransferSheet
-import com.example.test.ui.theme.FilterBadgeBg
-import com.example.test.ui.theme.FilterBadgeBorder
-import com.example.test.ui.theme.BorderBlue
 import com.example.test.ui.viewmodels.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -104,6 +102,7 @@ fun HomeScreen(
         statusFilteredTasks.filter { it.category.equals(selectedCategory, ignoreCase = true) }
     }
     var menuOpen by remember { mutableStateOf(false) }
+    val isDark = isSystemInDarkTheme()
 
     Box(
         modifier = Modifier
@@ -228,8 +227,8 @@ fun HomeScreen(
             LargeFloatingActionButton(
                 onClick = { onAddTask(null) },
                 shape = CircleShape,
-                containerColor = if (isDarkTheme) colorScheme.primary else Color.White,
-                contentColor   = if (isDarkTheme) colorScheme.onPrimary else colorScheme.primary,
+                containerColor = if (isDark) colorScheme.primary else Color.White,
+                contentColor   = if (isDark) Color.White else colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = (-15).dp)
@@ -341,6 +340,8 @@ fun HomeHeader(
     }
     val displayName = if (firstName.isBlank()) "there" else firstName
 
+    val isDark = isSystemInDarkTheme()
+
     Column {
         // ── Card with greeting text ───────────────────────────────────────
         Box(
@@ -363,7 +364,7 @@ fun HomeHeader(
                         text = "$greeting, $displayName",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
-                        color = colorScheme.onSurface,
+                        color = if (isDark) Color.White else colorScheme.onSurface,
                         lineHeight = 28.sp,
                         letterSpacing = 0.2.sp
                     )
@@ -372,7 +373,7 @@ fun HomeHeader(
                         text = dateString,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = colorScheme.onSurface.copy(alpha = 0.62f),
+                        color = (if (isDark) Color.White else colorScheme.onSurface).copy(alpha = 0.62f),
                         letterSpacing = 0.4.sp
                     )
                 }
@@ -405,7 +406,7 @@ fun HomeHeader(
 
 @Composable
 fun HamburgerButton(onClick: () -> Unit) {
-    val color = MaterialTheme.colorScheme.onBackground
+    val color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onBackground
     Box(
         modifier = Modifier
             .size(44.dp)
@@ -423,7 +424,7 @@ fun HamburgerButton(onClick: () -> Unit) {
                 Modifier
                     .width(16.dp).height(2.5.dp).clip(RoundedCornerShape(50))
                     .align(Alignment.Start).offset(x = 3.dp)
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.primary)
             )
             Box(Modifier.width(22.dp).height(2.5.dp).clip(RoundedCornerShape(50)).background(color))
         }
@@ -438,6 +439,7 @@ fun QuickAccessRow(
     onNotesClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -448,7 +450,7 @@ fun QuickAccessRow(
             subtitle = "Tap to open",
             icon = Icons.Default.Add,
             backgroundColor = colorScheme.primaryContainer,
-            contentColor = colorScheme.onPrimaryContainer,
+            contentColor = if (isDark) Color.White else colorScheme.onPrimaryContainer,
             modifier = Modifier.weight(1f),
             onClick = onNotesClick
         )
@@ -457,7 +459,7 @@ fun QuickAccessRow(
             subtitle = "View schedule",
             icon = Icons.Default.CalendarMonth,
             backgroundColor = colorScheme.secondaryContainer,
-            contentColor = colorScheme.onSecondaryContainer,
+            contentColor = if (isDark) Color.White else colorScheme.onSecondaryContainer,
             modifier = Modifier.weight(1f),
             onClick = onCalendarClick
         )

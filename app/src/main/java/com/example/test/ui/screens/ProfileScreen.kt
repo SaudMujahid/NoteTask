@@ -3,6 +3,7 @@ package com.example.test.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -32,6 +34,7 @@ fun ProfileScreen(
     val profile by viewModel.profile.collectAsState()
     val setupState = viewModel.setupState
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
 
     var nameField by remember { mutableStateOf(profile.firstName) }
     var isEditingName by remember { mutableStateOf(false) }
@@ -70,10 +73,10 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile", fontWeight = FontWeight.Black) },
+                title = { Text("Profile", fontWeight = FontWeight.Black, color = if (isDark) Color.White else colorScheme.onBackground) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = if (isDark) Color.White else colorScheme.onBackground)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -135,7 +138,11 @@ fun ProfileScreen(
                                     showNameWarning = true
                                 }
                             },
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorScheme.primary,
+                                contentColor = if (isDark) Color.White else colorScheme.onPrimary
+                            )
                         ) {
                             Text(if (isEditingName) "Save Name" else "Change Name")
                         }
@@ -277,13 +284,14 @@ private fun AuthOptionCard(
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) colorScheme.primary else colorScheme.outline.copy(alpha = 0.3f),
+                color = if (isSelected) (if (isDark) Color.White else colorScheme.primary) else colorScheme.outline.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(14.dp)
             )
             .background(
@@ -301,22 +309,22 @@ private fun AuthOptionCard(
                 .background(colorScheme.primary.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = colorScheme.primary, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = if (isDark) Color.White else colorScheme.primary, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = if (isDark) Color.White else colorScheme.onSurface)
             Text(
                 subtitle,
                 fontSize = 13.sp,
-                color = colorScheme.onSurface.copy(alpha = 0.5f)
+                color = (if (isDark) Color.White else colorScheme.onSurface).copy(alpha = 0.5f)
             )
         }
         if (isSelected) {
             Icon(
                 Icons.Default.CheckCircle,
                 contentDescription = "Selected",
-                tint = colorScheme.primary,
+                tint = if (isDark) Color.White else colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
         }

@@ -4,6 +4,7 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -61,6 +63,7 @@ fun LockScreen(
 ) {
     val profile by profileRepository.profileFlow.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
     var errorMsg by remember { mutableStateOf<String?>(null) }
     val shakeAnim = remember { Animatable(0f) }
 
@@ -97,19 +100,19 @@ fun LockScreen(
                 imageVector = Icons.Default.Lock,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = colorScheme.primary
+                tint = if (isDark) Color.White else colorScheme.primary
             )
             Spacer(Modifier.height(24.dp))
             Text(
                 "App Locked",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
-                color = colorScheme.onBackground
+                color = if (isDark) Color.White else colorScheme.onBackground
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 "Authenticate to continue",
-                color = colorScheme.onBackground.copy(alpha = 0.6f),
+                color = (if (isDark) Color.White else colorScheme.onBackground).copy(alpha = 0.6f),
                 fontSize = 16.sp
             )
             Spacer(Modifier.height(32.dp))
@@ -176,10 +179,10 @@ fun NoteAuthDialog(
                     Icons.Default.Lock,
                     null,
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(12.dp))
-                Text("Locked Note", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("Locked Note", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(16.dp))
 
                 when (profile.authType) {
@@ -227,7 +230,7 @@ private fun PinChallenge(onSubmit: (String) -> Unit) {
                         .size(20.dp)
                         .clip(CircleShape)
                         .background(
-                            if (index < pin.length) MaterialTheme.colorScheme.primary
+                            if (index < pin.length) (if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.primary)
                             else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                         )
                 )
@@ -267,7 +270,8 @@ private fun PinChallenge(onSubmit: (String) -> Unit) {
                             Text(
                                 text = key,
                                 fontSize = if (key == "⌫") 22.sp else 24.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -296,7 +300,11 @@ private fun PasswordChallenge(onSubmit: (String) -> Unit) {
         Button(
             onClick = { onSubmit(password) },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onPrimary
+            )
         ) {
             Text("Unlock")
         }
@@ -364,7 +372,11 @@ private fun BiometricChallenge(
                         biometricPrompt.authenticate(promptInfo)
                     }
                 },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Icon(Icons.Default.Fingerprint, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
