@@ -200,7 +200,8 @@ fun HomeScreen(
                         }
                     },
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) },
-                    onEditTask = { onAddTask(it) },               // ← navigate to AddTaskScreen
+                    onEditTask = { onAddTask(it) },
+                    onDeleteTask = { task -> taskViewModel.deleteTask(task) }, // Pass delete implementation
                     isDarkTheme = isDarkTheme
                 )
             }
@@ -254,6 +255,7 @@ fun HomeScreen(
         )
     }
 }
+
 // ── TaskListCard ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -261,6 +263,7 @@ fun TaskListCard(
     tasks: List<Task>,
     onCheckedChange: (Task) -> Unit,
     onEditTask: (Task) -> Unit = {},
+    onDeleteTask: (Task) -> Unit = {}, // Added delete callback param
     emptyMessage: String,
     modifier: Modifier = Modifier,
     isDarkTheme: Boolean = false
@@ -303,7 +306,8 @@ fun TaskListCard(
                             task = task,
                             checked = checked,
                             onCheckedChange = onCheck,
-                            onEditTask = onEditTask
+                            onEditTask = onEditTask,
+                            onDelete = { onDeleteTask(task) } // Wire the delete callback to TaskItem
                         )
                     }
                     if (index < tasks.lastIndex) {
@@ -318,6 +322,7 @@ fun TaskListCard(
         }
     }
 }
+
 // ── HomeHeader ───────────────────────────────────────────────────────────────
 
 @Composable
@@ -343,7 +348,6 @@ fun HomeHeader(
     val isDark = isSystemInDarkTheme()
 
     Column {
-        // ── Card with greeting text ───────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -384,7 +388,6 @@ fun HomeHeader(
 
         Spacer(Modifier.height(8.dp))
 
-        // ── Accent gradient bar ───────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()

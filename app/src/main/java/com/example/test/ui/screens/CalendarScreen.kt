@@ -312,7 +312,7 @@ fun YearView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 16.dp) 
+            .padding(horizontal = 12.dp, vertical = 16.dp)
             .calendarSwipeDetector(
                 onSwipeLeft = { viewModel.nextYear() },
                 onSwipeRight = { viewModel.previousYear() },

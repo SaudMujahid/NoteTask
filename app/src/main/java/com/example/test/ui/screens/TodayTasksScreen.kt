@@ -1,7 +1,6 @@
 package com.example.test.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,7 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.test.data.models.Task
-import com.example.test.ui.components.CategoryChip
 import com.example.test.ui.components.SwipeOffTaskItem
 import com.example.test.ui.components.TaskItem
 import com.example.test.ui.viewmodels.TaskViewModel
@@ -170,7 +168,8 @@ fun TodayTasksScreen(
                                         task = task,
                                         checked = checked,
                                         onCheckedChange = onCheck,
-                                        onEditTask = onAddTask
+                                        onEditTask = onAddTask,
+                                        onDelete = { taskViewModel.deleteTask(task) }
                                     )
                                 }
                                 if (index < todayTasks.lastIndex) {
@@ -246,12 +245,14 @@ fun TodayTasksScreen(
                                     checked = task.isChecked,
                                     onCheckedChange = { taskViewModel.toggleTask(task) }
                                 ) { checked, onCheck ->
-                                    OverdueTaskRow(
+                                    TaskItem(
                                         task = task,
-                                        dateText = dateText,
                                         checked = checked,
                                         onCheckedChange = onCheck,
-                                        onEditTask = onAddTask
+                                        onEditTask = onAddTask,
+                                        onDelete = { taskViewModel.deleteTask(task) },
+                                        dateText = dateText,
+                                        isOverdue = true
                                     )
                                 }
 
@@ -266,96 +267,6 @@ fun TodayTasksScreen(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Updated OverdueTaskRow with expandable description
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-private fun OverdueTaskRow(
-    task: Task,
-    dateText: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    description: String? = null,
-    isExpanded: Boolean = false,
-    onEditTask: (Task) -> Unit = {}
-) {
-    val cs = MaterialTheme.colorScheme
-    val isDark = isSystemInDarkTheme()
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onEditTask(task) } // allow editing overdue tasks too
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Checkbox(
-                    checked = checked,
-                    onCheckedChange = onCheckedChange,
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = if (isSystemInDarkTheme()) Color.White else cs.error,
-                        uncheckedColor = cs.onSurfaceVariant
-                    )
-                )
-                Spacer(Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = task.title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (checked) (if (isSystemInDarkTheme()) Color.White else cs.onSurface).copy(alpha = 0.4f) else (if (isSystemInDarkTheme()) Color.White else cs.onSurface)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    CategoryChip(category = task.category)
-                }
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(cs.error.copy(alpha = 0.12f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = dateText,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isSystemInDarkTheme()) Color.White else cs.error
-                )
-            }
-        }
-
-        // Expandable description
-        androidx.compose.animation.AnimatedVisibility(
-            visible = isExpanded && !description.isNullOrBlank()
-        ) {
-            Column {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = description ?: "",
-                    fontSize = 13.sp,
-                    color = cs.onSurface.copy(alpha = 0.6f),
-                    fontWeight = FontWeight.Normal,
-                    modifier = Modifier
-                        .padding(start = 56.dp, end = 8.dp) // Aligns with task title
-                        .fillMaxWidth()
-                )
             }
         }
     }
