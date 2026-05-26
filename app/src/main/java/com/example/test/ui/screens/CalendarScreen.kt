@@ -312,15 +312,16 @@ fun YearView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 12.dp, vertical = 16.dp) 
             .calendarSwipeDetector(
                 onSwipeLeft = { viewModel.nextYear() },
                 onSwipeRight = { viewModel.previousYear() },
                 onSwipeUp = onSwipeUpToMonth
             )
     ) {
+        // Year navigation buttons
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -338,13 +339,13 @@ fun YearView(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(12) { index ->
                 MonthCard(
@@ -372,8 +373,8 @@ fun MonthCard(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1.2f)
-            .shadow(3.dp, RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
+            .shadow(2.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
         color = if (isCurrentMonth) colorScheme.primaryContainer else colorScheme.surface,
         border = if (isCurrentMonth) {
             BorderStroke(2.dp, colorScheme.primary)
@@ -385,15 +386,18 @@ fun MonthCard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(horizontal = 6.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = monthName,
-                style = MaterialTheme.typography.titleMedium,
+
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (isCurrentMonth) FontWeight.Bold else FontWeight.Medium,
                 color = if (isCurrentMonth) colorScheme.onPrimaryContainer else colorScheme.onSurface,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
