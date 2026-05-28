@@ -207,6 +207,22 @@ fun CalendarScreen(
                             color = colorScheme.onBackground
                         )
                     }
+                    IconButton(onClick = {
+                        if (viewMode == CalendarViewMode.MONTH) {
+                            viewModel.setViewMode(CalendarViewMode.DAY)
+                        } else {
+                            viewModel.setViewMode(CalendarViewMode.MONTH)
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (viewMode == CalendarViewMode.MONTH)
+                                Icons.Default.CalendarViewDay
+                            else
+                                Icons.Default.CalendarMonth,
+                            contentDescription = if (viewMode == CalendarViewMode.MONTH) "Day view" else "Month view",
+                            tint = colorScheme.primary
+                        )
+                    }
                     IconButton(onClick = { viewModel.goToToday() }) {
                         Icon(
                             imageVector = Icons.Default.Today,
