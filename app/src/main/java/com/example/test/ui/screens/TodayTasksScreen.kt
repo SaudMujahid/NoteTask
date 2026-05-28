@@ -1,5 +1,8 @@
 package com.example.test.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -8,6 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,17 +40,44 @@ fun TodayTasksScreen(
     val cs = MaterialTheme.colorScheme
     val isDark = isSystemInDarkTheme()
 
-    val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
-    val todayLabel = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date()) }
+    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val displayFormatter = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
 
-    val todayTasks = remember(tasks, today) { tasks.filter { it.date == today } }
+    val today = remember { dateFormat.format(Date()) }
+    val todayLabel = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date()) }
+
+    // 7 days from tomorrow
+    val sevenDaysLater = remember {
+        Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }.time
+    }
+    val sevenDaysLaterStr = remember { dateFormat.format(sevenDaysLater) }
+
+    // Beyond 7 days (for "show more")
+    val allUpcomingEnd = remember {
+        Calendar.getInstance().apply { add(Calendar.YEAR, 10) }.time
+    }
+    val allUpcomingEndStr = remember { dateFormat.format(allUpcomingEnd) }
+
+    val todayTasks = remember(tasks, today) {
+        tasks.filter { it.date == today }
+    }
     val overdueTasks = remember(tasks, today) {
         tasks.filter { it.date < today && it.date.isNotBlank() && !it.isChecked }
             .sortedBy { it.date }
     }
+    val upcomingSevenTasks = remember(tasks, today, sevenDaysLaterStr) {
+        tasks.filter { it.date > today && it.date <= sevenDaysLaterStr && it.date.isNotBlank() }
+            .sortedBy { it.date }
+    }
+    val upcomingBeyondTasks = remember(tasks, sevenDaysLaterStr, allUpcomingEndStr) {
+        tasks.filter { it.date > sevenDaysLaterStr && it.date <= allUpcomingEndStr && it.date.isNotBlank() }
+            .sortedBy { it.date }
+    }
 
     val hasOverdue = overdueTasks.isNotEmpty()
+    val hasUpcoming = upcomingSevenTasks.isNotEmpty() || upcomingBeyondTasks.isNotEmpty()
+
+    var showMoreUpcoming by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -86,20 +118,99 @@ fun TodayTasksScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(bottom = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            // ── OVERDUE card ──
+            if (hasOverdue) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 80.dp, max = 280.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "Overdue",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Color.White else cs.error
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(cs.error.copy(alpha = 0.12f))
+                                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    "${overdueTasks.size}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color.White else cs.error
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = cs.outline.copy(alpha = 0.2f))
+
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            overdueTasks.forEachIndexed { index, task ->
+                                val parsedDate = remember(task.date) {
+                                    try {
+                                        dateFormat.parse(task.date)
+                                    } catch (_: Exception) { null }
+                                }
+                                val dateText = parsedDate?.let { displayFormatter.format(it) } ?: task.date
+
+                                SwipeOffTaskItem(
+                                    checked = task.isChecked,
+                                    onCheckedChange = { taskViewModel.toggleTask(task) }
+                                ) { checked, onCheck ->
+                                    TaskItem(
+                                        task = task,
+                                        checked = checked,
+                                        onCheckedChange = onCheck,
+                                        onEditTask = onAddTask,
+                                        onDelete = { taskViewModel.deleteTask(task) },
+                                        dateText = dateText,
+                                        isOverdue = true
+                                    )
+                                }
+                                if (index < overdueTasks.lastIndex) {
+                                    HorizontalDivider(
+                                        color = cs.outline.copy(alpha = 0.2f),
+                                        thickness = 1.dp
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+                }
+            }
 
             // ── TODAY card ──
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(if (hasOverdue) 1.4f else 1f),
+                    .heightIn(min = 120.dp, max = 400.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = cs.surface),
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxWidth()) {
 
                     Row(
                         modifier = Modifier
@@ -133,7 +244,9 @@ fun TodayTasksScreen(
 
                     if (todayTasks.isEmpty()) {
                         Box(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(140.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -154,11 +267,7 @@ fun TodayTasksScreen(
                             }
                         }
                     } else {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                        ) {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                             todayTasks.forEachIndexed { index, task ->
                                 SwipeOffTaskItem(
                                     checked = task.isChecked,
@@ -185,17 +294,20 @@ fun TodayTasksScreen(
                 }
             }
 
-            // ── OVERDUE card ──
-            if (hasOverdue) {
+            // ── UPCOMING card ──
+            if (hasUpcoming) {
+                val totalUpcomingCount = upcomingSevenTasks.size + upcomingBeyondTasks.size
+                val visibleCount = if (showMoreUpcoming) totalUpcomingCount else upcomingSevenTasks.size
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .heightIn(min = 80.dp, max = if (showMoreUpcoming) 480.dp else 320.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
 
                         Row(
                             modifier = Modifier
@@ -205,39 +317,37 @@ fun TodayTasksScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                "Overdue",
+                                "Upcoming",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDark) Color.White else cs.error
+                                color = cs.onSurface
                             )
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(50))
-                                    .background(cs.error.copy(alpha = 0.12f))
+                                    .background(cs.secondary.copy(alpha = 0.12f))
                                     .padding(horizontal = 10.dp, vertical = 3.dp)
                             ) {
                                 Text(
-                                    "${overdueTasks.size}",
+                                    if (showMoreUpcoming || upcomingBeyondTasks.isEmpty())
+                                        "$visibleCount"
+                                    else
+                                        "${upcomingSevenTasks.size}+",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isDark) Color.White else cs.error
+                                    color = if (isDark) Color.White else cs.secondary
                                 )
                             }
                         }
 
                         HorizontalDivider(color = cs.outline.copy(alpha = 0.2f))
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            overdueTasks.forEachIndexed { index, task ->
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+
+                            // Always show next 7 days
+                            upcomingSevenTasks.forEachIndexed { index, task ->
                                 val parsedDate = remember(task.date) {
-                                    try {
-                                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                            .parse(task.date)
-                                    } catch (_: Exception) { null }
+                                    try { dateFormat.parse(task.date) } catch (_: Exception) { null }
                                 }
                                 val dateText = parsedDate?.let { displayFormatter.format(it) } ?: task.date
 
@@ -251,23 +361,96 @@ fun TodayTasksScreen(
                                         onCheckedChange = onCheck,
                                         onEditTask = onAddTask,
                                         onDelete = { taskViewModel.deleteTask(task) },
-                                        dateText = dateText,
-                                        isOverdue = true
+                                        dateText = dateText
                                     )
                                 }
 
-                                if (index < overdueTasks.lastIndex) {
+                                val isLastInSection = index == upcomingSevenTasks.lastIndex
+                                val hasMore = upcomingBeyondTasks.isNotEmpty()
+
+                                if (!isLastInSection || (isLastInSection && hasMore && showMoreUpcoming)) {
                                     HorizontalDivider(
                                         color = cs.outline.copy(alpha = 0.2f),
                                         thickness = 1.dp
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(8.dp))
+
+                            // "Show more" expanded tasks
+                            AnimatedVisibility(
+                                visible = showMoreUpcoming,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                Column {
+                                    upcomingBeyondTasks.forEachIndexed { index, task ->
+                                        val parsedDate = remember(task.date) {
+                                            try { dateFormat.parse(task.date) } catch (_: Exception) { null }
+                                        }
+                                        val dateText = parsedDate?.let { displayFormatter.format(it) } ?: task.date
+
+                                        SwipeOffTaskItem(
+                                            checked = task.isChecked,
+                                            onCheckedChange = { taskViewModel.toggleTask(task) }
+                                        ) { checked, onCheck ->
+                                            TaskItem(
+                                                task = task,
+                                                checked = checked,
+                                                onCheckedChange = onCheck,
+                                                onEditTask = onAddTask,
+                                                onDelete = { taskViewModel.deleteTask(task) },
+                                                dateText = dateText
+                                            )
+                                        }
+                                        if (index < upcomingBeyondTasks.lastIndex) {
+                                            HorizontalDivider(
+                                                color = cs.outline.copy(alpha = 0.2f),
+                                                thickness = 1.dp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Show more / Show less button
+                            if (upcomingBeyondTasks.isNotEmpty()) {
+                                HorizontalDivider(color = cs.outline.copy(alpha = 0.2f))
+                                TextButton(
+                                    onClick = { showMoreUpcoming = !showMoreUpcoming },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (showMoreUpcoming)
+                                            Icons.Default.KeyboardArrowUp
+                                        else
+                                            Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = cs.onSurface.copy(alpha = 0.5f)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        if (showMoreUpcoming)
+                                            "Show less"
+                                        else
+                                            "Show ${upcomingBeyondTasks.size} more",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = cs.onSurface.copy(alpha = 0.5f)
+                                    )
+                                }
+                            } else {
+                                Spacer(Modifier.height(8.dp))
+                            }
                         }
                     }
                 }
             }
+
+            // Bottom breathing room
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
