@@ -44,8 +44,8 @@ fun TaskItem(
     modifier: Modifier = Modifier,
     onEditTask: (Task) -> Unit = {},
     onDelete: (() -> Unit)? = null,
-    dateText: String? = null,      // ← add this
-    isOverdue: Boolean = false      // ← add this
+    dateText: String? = null,
+    isOverdue: Boolean = false
 ) {
     val cs = MaterialTheme.colorScheme
     val isDark = isSystemInDarkTheme()

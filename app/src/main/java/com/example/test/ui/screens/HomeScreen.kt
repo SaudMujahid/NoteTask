@@ -143,13 +143,12 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { onTasksClick() }
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Tasks",
+                        text = "Today's Tasks",
                         fontWeight = FontWeight.Black,
                         fontSize = 36.sp,
                         color = colorScheme.onBackground
@@ -158,6 +157,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
+                            .clickable { onTasksClick() }
                             .background(colorScheme.primary.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -202,7 +202,8 @@ fun HomeScreen(
                     onCheckedChange = { task -> taskViewModel.toggleTask(task) },
                     onEditTask = { onAddTask(it) },
                     onDeleteTask = { task -> taskViewModel.deleteTask(task) }, // Pass delete implementation
-                    isDarkTheme = isDarkTheme
+                    isDarkTheme = isDarkTheme,
+                    onCardClick = onTasksClick
                 )
             }
             item { Spacer(Modifier.height(20.dp)) }
@@ -264,6 +265,7 @@ fun TaskListCard(
     onCheckedChange: (Task) -> Unit,
     onEditTask: (Task) -> Unit = {},
     onDeleteTask: (Task) -> Unit = {}, // Added delete callback param
+    onCardClick: () -> Unit = {},
     emptyMessage: String,
     modifier: Modifier = Modifier,
     isDarkTheme: Boolean = false
@@ -273,6 +275,7 @@ fun TaskListCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .clickable { onCardClick() }
             .then(if (!isDarkTheme) Modifier.shadow(3.dp, RoundedCornerShape(22.dp)) else Modifier),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
