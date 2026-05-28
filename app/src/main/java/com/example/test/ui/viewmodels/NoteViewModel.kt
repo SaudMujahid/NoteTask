@@ -28,19 +28,21 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
     val filterType: StateFlow<String> = _filterType.asStateFlow()
     val saveEvents: SharedFlow<NoteSaveEvent> = _saveEvents.asSharedFlow()
 
-    val notes: StateFlow<List<Note>> = combine(_searchQuery, _filterType) { q, f ->
-        Pair(q, f)
+    val notes: StateFlow<List<Note>> = combine(_searchQuery, _filterType) { query, filter ->
+        Pair(query, filter)
     }.flatMapLatest { (query, filter) ->
-        val flow = if (query.isEmpty()) {
-            repository.getAllNotes()
-        } else {
-            repository.searchNotes(query)
-        }
-
-        flow.map { list ->
-            if (filter == "ALL") list else list.filter { it.type == filter }
+        repository.getAllNotes().map { list ->
+            list.filter { note ->
+                val matchesQuery = query.isBlank() ||
+                        note.title.contains(query, ignoreCase = true) ||
+                        note.content.contains(query, ignoreCase = true)
+                val matchesFilter = filter == "ALL" || note.type == filter
+                matchesQuery && matchesFilter
+            }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+
 
     fun setSearchQuery(q: String) { _searchQuery.value = q }
     fun setFilterType(t: String) { _filterType.value = t }

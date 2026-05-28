@@ -1,5 +1,7 @@
 package com.example.test.ui.screens
 
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -53,6 +55,15 @@ fun AppLockGate(
             profileRepository = profileRepository
         )
     }
+}
+
+private fun Context.findFragmentActivity(): FragmentActivity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is FragmentActivity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 @Composable
@@ -318,65 +329,69 @@ private fun BiometricChallenge(
     onBackupPinSubmit: (String) -> Boolean
 ) {
     val context = LocalContext.current
+    // Unwrap safely — works inside Dialog {} too
+    val activity = remember(context) { context.findFragmentActivity() }
     var showBackup by rememberSaveable { mutableStateOf(false) }
     var backupError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun launchBiometric() {
+        activity ?: return
+        val executor = ContextCompat.getMainExecutor(context)
+        val prompt = BiometricPrompt(
+            activity,
+            executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    onUnlock()
+                }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                        errorCode == BiometricPrompt.ERROR_USER_CANCELED
+                    ) {
+                        showBackup = true
+                    }
+                }
+            }
+        )
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Unlock")
+            .setSubtitle("Verify your identity")
+            .setNegativeButtonText("Use Backup PIN")
+            .build()
+        prompt.authenticate(info)
+    }
+
+    // Fire automatically so the user doesn't need an extra tap
+    LaunchedEffect(showBackup) {
+        if (!showBackup) launchBiometric()
+    }
 
     if (showBackup) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Enter Backup PIN", fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(16.dp))
             PinChallenge(onSubmit = { pin ->
-                if (onBackupPinSubmit(pin)) {
-                    onUnlock()
-                } else {
-                    backupError = "Incorrect PIN"
-                }
+                if (onBackupPinSubmit(pin)) onUnlock()
+                else backupError = "Incorrect PIN"
             })
             backupError?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
             }
             Spacer(Modifier.height(16.dp))
-            TextButton(onClick = { showBackup = false }) {
+            TextButton(onClick = { showBackup = false }) { // triggers LaunchedEffect → re-fires biometric
                 Text("Use Fingerprint")
             }
         }
     } else {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Button(
-                onClick = {
-                    val activity = context as? FragmentActivity
-                    activity?.let {
-                        val executor = ContextCompat.getMainExecutor(context)
-                        val biometricPrompt = BiometricPrompt(
-                            it,
-                            executor,
-                            object : BiometricPrompt.AuthenticationCallback() {
-                                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                    super.onAuthenticationSucceeded(result)
-                                    onUnlock()
-                                }
-                                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                                    super.onAuthenticationError(errorCode, errString)
-                                    if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
-                                        errorCode == BiometricPrompt.ERROR_USER_CANCELED) {
-                                        showBackup = true
-                                    }
-                                }
-                            }
-                        )
-                        val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                            .setTitle("Unlock")
-                            .setSubtitle("Verify your identity")
-                            .setNegativeButtonText("Use Backup PIN")
-                            .build()
-                        biometricPrompt.authenticate(promptInfo)
-                    }
-                },
+                onClick = ::launchBiometric,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onPrimary
+                    contentColor = if (isSystemInDarkTheme()) Color.White
+                    else MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Icon(Icons.Default.Fingerprint, null, modifier = Modifier.size(20.dp))
