@@ -181,6 +181,7 @@ fun MyApp(
                             noteId = noteId,
                             noteType = noteType,
                             noteViewModel = noteViewModel,
+                            profileRepository = profileRepository,
                             onBack = { navController.popBackStack() }
                         )
                     }

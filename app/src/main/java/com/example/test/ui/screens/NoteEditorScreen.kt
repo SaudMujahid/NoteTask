@@ -25,10 +25,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import coil.compose.AsyncImage
+import com.example.test.data.models.AuthType
 import com.example.test.data.models.ListItem
 import com.example.test.data.models.Note
+import com.example.test.data.repository.ProfileRepository
 import com.example.test.ui.viewmodels.NoteSaveEvent
 import com.example.test.ui.viewmodels.NoteViewModel
 import kotlinx.coroutines.delay
@@ -47,12 +50,19 @@ fun NoteEditorScreen(
     noteId: Long,
     noteType: String,
     noteViewModel: NoteViewModel,
+    profileRepository: ProfileRepository,
+    onNavigateToAuth: () -> Unit = {},
     onBack: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val notes by noteViewModel.notes.collectAsState()
     val existingNote = remember(noteId, notes) { notes.find { it.id == noteId } }
     val type = existingNote?.type ?: noteType
+
+    val profile by profileRepository.profileFlow.collectAsState()
+    // Tracks the real DB id once a new note is first inserted
+    var currentNoteId by remember { mutableStateOf(noteId) }
+    var showNoAuthDialog by remember { mutableStateOf(false) }
 
     var title by remember { mutableStateOf(existingNote?.title ?: "") }
     var content by remember { mutableStateOf(existingNote?.content ?: "") }
@@ -99,11 +109,10 @@ fun NoteEditorScreen(
 
     fun save(source: SaveSource) {
         if (isSaving || !hasUnsavedChanges) return
-
         isSaving = true
         currentSaveSource = source
         val note = Note(
-            id = if (noteId != -1L) noteId else 0L,
+            id = if (currentNoteId != -1L) currentNoteId else 0L,
             title = title,
             content = content,
             type = type,
@@ -114,7 +123,7 @@ fun NoteEditorScreen(
             isPinned = isPinned,
             isLocked = isLocked
         )
-        if (noteId == -1L) noteViewModel.addNote(note)
+        if (currentNoteId == -1L) noteViewModel.addNote(note)
         else noteViewModel.updateNote(note)
     }
 
@@ -140,6 +149,7 @@ fun NoteEditorScreen(
             isSaving = false
             when (event) {
                 is NoteSaveEvent.Success -> {
+                    if (currentNoteId == -1L) currentNoteId = event.noteId
                     hasUnsavedChanges = false
                     if (currentSaveSource == SaveSource.MANUAL) {
                         isSaved = true
@@ -160,6 +170,22 @@ fun NoteEditorScreen(
             }
         }
     }
+    if (showNoAuthDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoAuthDialog = false },
+            icon = { Icon(Icons.Default.Lock, null) },
+            title = { Text("No authentication set up") },
+            text = { Text("Set up a PIN, password, or biometrics in your profile before locking notes.") },
+            confirmButton = {
+                Button(onClick = { showNoAuthDialog = false; onNavigateToAuth() }) {
+                    Text("Set up now")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoAuthDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -172,10 +198,13 @@ fun NoteEditorScreen(
                 },
                 title = {
                     Text(
-                        when (type) { "JOURNAL" -> "📔 Journal"; "LIST" -> "✅ List"; else -> "📝 Note" },
-                        fontSize = 16.sp,
+                        text = when (type) { "JOURNAL" -> "📔 Journal"; "LIST" -> "✅ List"; else -> "📝 Note" },
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
-                        color = if (isDark) Color.White else colorScheme.primary
+                        color = if (isDark) Color.White else colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 90.dp)
                     )
                 },
                 actions = {
@@ -193,7 +222,14 @@ fun NoteEditorScreen(
                             tint = if (isPinned) (if (isDark) Color.White else colorScheme.primary) else onBgVariant
                         )
                     }
-                    IconButton(onClick = { isLocked = !isLocked; markUnsaved() }) {
+                    IconButton(onClick = {
+                        if (!isLocked && profile.authType == AuthType.NONE) {
+                            showNoAuthDialog = true
+                        } else {
+                            isLocked = !isLocked
+                            markUnsaved()
+                        }
+                    }) {
                         Icon(
                             if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
                             null,
