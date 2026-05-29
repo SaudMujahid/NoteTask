@@ -14,13 +14,13 @@ class TaskNotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val taskId = intent.getLongExtra("task_id", -1L)
         val taskTitle = intent.getStringExtra("task_title") ?: "Task Reminder"
+        val taskType = intent.getStringExtra("task_type") ?: "upcoming" // "overdue" or "upcoming"
 
         if (taskId == -1L) return
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE)
                 as NotificationManager
 
-        // Create channel on Android 8+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -32,10 +32,18 @@ class TaskNotificationReceiver : BroadcastReceiver() {
             notificationManager.createNotificationChannel(channel)
         }
 
+        // Differentiate title and body based on task type
+        val notifTitle = if (taskType == "overdue") "⚠️ Overdue Task" else "⏰ Upcoming Task"
+        val notifBody = if (taskType == "overdue")
+            "\"$taskTitle\" is overdue. Don't forget to complete it!"
+        else
+            "\"$taskTitle\" is coming up. Get ready!"
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // change to your own icon
-            .setContentTitle("Upcoming Task")
-            .setContentText(taskTitle)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(notifTitle)
+            .setContentText(notifBody)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(notifBody)) // expand for long titles
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()

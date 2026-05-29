@@ -110,4 +110,63 @@ object TaskScheduler {
             null
         }
     }
+    fun scheduleDailyDigest(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Log.e(TAG, "Cannot schedule exact alarm — permission not granted")
+                return
+            }
+        }
+
+        // Set trigger to today at 12:00; if already past noon, schedule for tomorrow
+        val triggerMillis = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 12)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1) // already past noon today → start tomorrow
+            }
+        }.timeInMillis
+
+        val pendingIntent = buildDailyDigestPendingIntent(context) ?: run {
+            Log.e(TAG, "Failed to build PendingIntent for daily digest")
+            return
+        }
+
+        // setRepeating isn't exact on modern Android; chain re-scheduling from the receiver instead,
+        // or use setExactAndAllowWhileIdle + re-schedule inside DailyDigestReceiver for reliability.
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            triggerMillis,
+            pendingIntent
+        )
+
+        Log.d(TAG, "Daily digest scheduled for $triggerMillis")
+    }
+
+    fun cancelDailyDigest(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        buildDailyDigestPendingIntent(context, noCreate = true)?.let {
+            alarmManager.cancel(it)
+            it.cancel()
+            Log.d(TAG, "Daily digest alarm cancelled")
+        }
+    }
+
+    private fun buildDailyDigestPendingIntent(
+        context: Context,
+        noCreate: Boolean = false
+    ): PendingIntent? {
+        val intent = Intent(context, DailyDigestReceiver::class.java)
+        val flags = if (noCreate) {
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        }
+        // Use a fixed request code distinct from task IDs (e.g. Int.MAX_VALUE)
+        return PendingIntent.getBroadcast(context, Int.MAX_VALUE, intent, flags)
+    }
 }
