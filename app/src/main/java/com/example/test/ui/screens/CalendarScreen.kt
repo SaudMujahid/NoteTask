@@ -1013,7 +1013,7 @@ fun TypeFilterDropdownBadge(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "Type: $selectedCategory",
+                    text = "$selectedCategory",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant

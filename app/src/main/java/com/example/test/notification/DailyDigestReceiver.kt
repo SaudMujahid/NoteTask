@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.example.test.data.AppDatabase          // adjust to your actual DB class name/path
+import com.example.test.data.AppDatabase
 import com.example.test.data.repository.TaskRepository
 import com.example.test.notification.TaskScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +25,6 @@ class DailyDigestReceiver : BroadcastReceiver() {
                 // Re-arm for tomorrow immediately, before doing any work
                 TaskScheduler.scheduleDailyDigest(context)
 
-                // Build the repo from the Room DB directly — no singleton needed
                 val dao = AppDatabase.getDatabase(context).taskDao()
                 val repository = TaskRepository(dao)
 

@@ -86,6 +86,66 @@ fun HomeScreen(
         )
     }
 
+    // Track whether the welcome dialog is visible
+    var showWelcomeDialog by remember { mutableStateOf(false) }
+
+// Trigger the dialog if the profile loads and the name is blank
+    LaunchedEffect(firstName) {
+        if (firstName.isBlank()) {
+            showWelcomeDialog = true
+        }
+    }
+
+    if (showWelcomeDialog) {
+        var tempName by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = {
+                // Leave empty if you want to force them to enter a name before dismissing
+            },
+            title = {
+                Text(
+                    text = "Welcome!",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Please enter your name to personalize your experience.",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = tempName,
+                        onValueChange = { tempName = it },
+                        label = { Text("First Name") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (tempName.isNotBlank()) {
+                            // Save the name using your existing repository
+                            profileRepository.saveProfile(profile.copy(firstName = tempName.trim()))
+                            showWelcomeDialog = false
+                        }
+                    },
+                    enabled = tempName.isNotBlank(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Continue")
+                }
+            }
+        )
+    }
+
     val todayTasks = remember(taskState, today) { taskState.filter { it.date == today } }
     val availableCategories = remember { TaskCategories.ALL_CATEGORIES }
     val pendingTasks = remember(todayTasks) { todayTasks.filter { !it.isChecked } }
