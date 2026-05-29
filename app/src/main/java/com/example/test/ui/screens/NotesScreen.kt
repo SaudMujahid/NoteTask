@@ -186,11 +186,11 @@ fun NotesScreen(
 @Composable
 private fun FabOption(label: String, onClick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(8.dp), shadowElevation = 4.dp) {
+        Surface(shape = RoundedCornerShape(8.dp), shadowElevation = 4.dp, onClick = onClick) {
             Text(label, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontWeight = FontWeight.Medium, color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface)
         }
         Spacer(Modifier.width(8.dp))
-        SmallFloatingActionButton(onClick = onClick) { Icon(Icons.Default.Edit, null, tint = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onPrimary) }
+        SmallFloatingActionButton(onClick = onClick) { Icon(Icons.Default.Edit, null, tint = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.primary) }
     }
 }
 
