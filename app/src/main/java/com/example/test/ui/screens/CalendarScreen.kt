@@ -574,7 +574,6 @@ fun DayView(
     onPullDownToMonth: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val weekDates by viewModel.weekDates.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
     val tasksForSelectedDate by viewModel.tasksForSelectedDate.collectAsState()
     val isTodaysTasksExpanded by viewModel.isTodaysTasksExpanded.collectAsState()
@@ -596,7 +595,6 @@ fun DayView(
             )
     ) {
         DateStripRow(
-            dates = weekDates,
             selectedDate = selectedDate,
             onDateClick = { viewModel.selectDate(it) }
         )
@@ -627,7 +625,8 @@ fun DayView(
                 CollapsibleScheduleCard(
                     isExpanded = isScheduleExpanded,
                     onToggleExpand = { viewModel.toggleScheduleExpanded() },
-                    tasks = tasksForSelectedDate
+                    tasks = tasksForSelectedDate,
+                    onAddTask = onAddTask
                 )
             }
         }
@@ -768,12 +767,33 @@ fun CalendarDayCell(
 
 @Composable
 fun DateStripRow(
-    dates: List<Date>,
     selectedDate: Date,
     onDateClick: (Date) -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
+
+    // Anchor everything to today's date so index mapping is stable
+    val anchorDate = remember {
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+    }
+
+    val lazyListState = rememberLazyListState()
+
+    // Smoothly snap to and center the selected date when it changes programmatically
+    LaunchedEffect(selectedDate) {
+        val targetIndex = getIndexFromDate(anchorDate, selectedDate)
+        // Coerce targetIndex so it remains in a safe list bound and center it
+        val scrollPosition = (targetIndex - 2).coerceAtLeast(0)
+        lazyListState.scrollToItem(scrollPosition)
+    }
+
     LazyRow(
+        state = lazyListState,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
@@ -787,7 +807,9 @@ fun DateStripRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        items(dates) { date ->
+        // High count (100,000 items) enables virtually infinite bidirectional scrolling
+        items(100000) { index ->
+            val date = getDateFromIndex(anchorDate, index)
             DateChipItem(
                 date = date,
                 isSelected = isSameDay(date, selectedDate),
@@ -1045,7 +1067,8 @@ fun TypeFilterDropdownBadge(
 fun CollapsibleScheduleCard(
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
-    tasks: List<Task>
+    tasks: List<Task>,
+    onAddTask: (Task?) -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val rotationAngle by animateFloatAsState(if (isExpanded) 180f else 0f, label = "rotation")
@@ -1080,7 +1103,7 @@ fun CollapsibleScheduleCard(
                 exit = shrinkVertically() + fadeOut()
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp)) {
-                    TimelineView(tasks = tasks)
+                    TimelineView(tasks = tasks, onAddTask = onAddTask)
                 }
             }
         }
@@ -1088,7 +1111,10 @@ fun CollapsibleScheduleCard(
 }
 
 @Composable
-fun TimelineView(tasks: List<Task>) {
+fun TimelineView(
+    tasks: List<Task>,
+    onAddTask: (Task?) -> Unit = {}
+) {
     val colorScheme = MaterialTheme.colorScheme
     val hourSlotHeight = 72.dp
     val scheduledTasks = remember(tasks) {
@@ -1129,12 +1155,28 @@ fun TimelineView(tasks: List<Task>) {
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                repeat(25) { hourIndex ->
-                    HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth().offset(y = hourSlotHeight * hourIndex),
-                        color = colorScheme.outlineVariant.copy(alpha = 0.8f)
-                    )
+                // Clickable hourly backgrounds representing empty time slots
+                Column(modifier = Modifier.fillMaxSize()) {
+                    repeat(24) { hourIndex ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(hourSlotHeight)
+                                .clickable { onAddTask(null) }
+                        ) {
+                            HorizontalDivider(
+                                modifier = Modifier.fillMaxWidth().align(Alignment.TopStart),
+                                color = colorScheme.outlineVariant.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
                 }
+
+                // Final boundary line at the bottom of the 24th hour
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth().offset(y = hourSlotHeight * 24),
+                    color = colorScheme.outlineVariant.copy(alpha = 0.8f)
+                )
 
                 scheduledTasks.forEach { task ->
                     val start = task.scheduleStartMinutes ?: 0
@@ -1151,6 +1193,7 @@ fun TimelineView(tasks: List<Task>) {
                             .border(1.dp, bg.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
                             .clip(RoundedCornerShape(14.dp))
                             .background(bg)
+                            .clickable { onAddTask(task) } // Opens the specific task on click
                             .padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1220,4 +1263,34 @@ private fun isSameDay(date1: Date, date2: Date): Boolean {
     val cal2 = Calendar.getInstance().apply { time = date2 }
     return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
             cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+}
+
+// Calculate the item index from a specified target date relative to the anchor
+private fun getIndexFromDate(anchorDate: Date, targetDate: Date): Int {
+    val calAnchor = Calendar.getInstance().apply {
+        time = anchorDate
+        set(Calendar.HOUR_OF_DAY, 12) // Uses noon to safeguard against DST transitions
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    val calTarget = Calendar.getInstance().apply {
+        time = targetDate
+        set(Calendar.HOUR_OF_DAY, 12)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    val diffMillis = calTarget.timeInMillis - calAnchor.timeInMillis
+    val days = Math.round(diffMillis.toDouble() / (1000 * 60 * 60 * 24)).toInt()
+    return 50000 + days
+}
+
+// Convert any item index back to its corresponding date relative to the anchor
+private fun getDateFromIndex(anchorDate: Date, index: Int): Date {
+    val cal = Calendar.getInstance().apply {
+        time = anchorDate
+        add(Calendar.DAY_OF_MONTH, index - 50000)
+    }
+    return cal.time
 }
