@@ -299,7 +299,8 @@ fun CalendarScreen(
                     CalendarViewMode.MONTH -> MonthView(
                         viewModel = viewModel,
                         onAddTask = onAddTask,
-                        onNavigateToDay = { viewModel.setViewMode(CalendarViewMode.DAY) }
+                        onNavigateToDay = { viewModel.setViewMode(CalendarViewMode.DAY) },
+                        onDoubleTapDate = { date -> viewModel.selectDateAndNavigateToDay(date) }
                     )
                     CalendarViewMode.DAY -> DayView(
                         viewModel = viewModel,
@@ -359,6 +360,7 @@ fun YearView(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
+            userScrollEnabled = false, // Prevents local scrolling absorption, allows bubble-up gestures [1]
             contentPadding = PaddingValues(4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -407,7 +409,6 @@ fun MonthCard(
         ) {
             Text(
                 text = monthName,
-
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (isCurrentMonth) FontWeight.Bold else FontWeight.Medium,
                 color = if (isCurrentMonth) colorScheme.onPrimaryContainer else colorScheme.onSurface,
@@ -429,7 +430,8 @@ private fun isCurrentYearMonth(year: Int, month: Int): Boolean {
 fun MonthView(
     viewModel: CalendarViewModel,
     onAddTask: (Task?) -> Unit = {},
-    onNavigateToDay: () -> Unit
+    onNavigateToDay: () -> Unit,
+    onDoubleTapDate: (Date) -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val calendarDays by viewModel.calendarDays.collectAsState()
@@ -437,6 +439,9 @@ fun MonthView(
     val tasksForSelectedDate by viewModel.tasksForSelectedDate.collectAsState()
     val selectedDateFormatter = remember { SimpleDateFormat("EEE, MMM d", Locale.getDefault()) }
     val tasksListState = rememberLazyListState()
+
+    var lastTapTime by remember { mutableLongStateOf(0L) }
+    var lastTappedDate by remember { mutableStateOf<Date?>(null) }
 
     val nestedScrollConnection = rememberOverscrollConnection(
         lazyListState = tasksListState,
@@ -448,6 +453,7 @@ fun MonthView(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            // Gesture handling belongs to the parent Column so drag animations are silky smooth [1]
             .calendarSwipeDetector(
                 onSwipeLeft = { viewModel.nextMonth() },
                 onSwipeRight = { viewModel.previousMonth() },
@@ -466,7 +472,11 @@ fun MonthView(
                     .size(40.dp)
                     .background(colorScheme.surface, CircleShape)
             ) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = colorScheme.primary)
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    contentDescription = "Previous Month",
+                    tint = colorScheme.primary
+                )
             }
             IconButton(
                 onClick = { viewModel.nextMonth() },
@@ -474,7 +484,11 @@ fun MonthView(
                     .size(40.dp)
                     .background(colorScheme.surface, CircleShape)
             ) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Next Month", tint = colorScheme.primary)
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = "Next Month",
+                    tint = colorScheme.primary
+                )
             }
         }
 
@@ -484,6 +498,7 @@ fun MonthView(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
+            userScrollEnabled = false, // Allows click-through and lets parent Column catch swipe details [1]
             modifier = Modifier
                 .fillMaxWidth()
                 .height(300.dp)
@@ -497,67 +512,67 @@ fun MonthView(
                 CalendarDayCell(
                     day = day,
                     isSelected = isSameDay(day.date, selectedDate),
-                    onClick = { viewModel.selectDate(day.date) }
+                    onClick = {
+                        val now = System.currentTimeMillis()
+                        val isSameDateAsBefore =
+                            lastTappedDate?.let { isSameDay(it, day.date) } == true
+                        if (isSameDateAsBefore && now - lastTapTime < 400L) {
+                            onDoubleTapDate(day.date)  // selects date AND navigates
+                        } else {
+                            viewModel.selectDate(day.date)
+                        }
+                        lastTapTime = now
+                        lastTappedDate = day.date
+                    }
                 )
             }
         }
+        Spacer(modifier = Modifier.height(20.dp))
 
-        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = colorScheme.outline.copy(alpha = 0.25f)
+        )
 
-        // Outer box is no longer globally clickable, allowing normal scrolling mechanics
-        Box(
-            modifier = Modifier.weight(1f)
-        ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Box(modifier = Modifier.weight(1f)) {
             Column {
-                Text(
-                    text = "Tasks for ${selectedDateFormatter.format(selectedDate)}",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                Column {
+                    Text(
+                        text = "Tasks for ${selectedDateFormatter.format(selectedDate)}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Double-tap a date to view more",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
 
-                if (tasksForSelectedDate.isEmpty()) {
-                    // Clickability is now scoped exclusively to this empty state card
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNavigateToDay() },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = colorScheme.surface)
-                    ) {
-                        Text(
-                            text = "No tasks for selected date",
-                            modifier = Modifier.padding(16.dp),
-                            color = colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyMedium
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyColumn(
+                    state = tasksListState,
+                    modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(tasksForSelectedDate) { task ->
+                        TaskItem(
+                            task = task,
+                            checked = task.isChecked,
+                            onCheckedChange = { viewModel.toggleTask(task) },
+                            onEditTask = { onAddTask(task) },
+                            onDelete = { viewModel.deleteTask(task) }
                         )
-                    }
-                } else {
-                    LazyColumn(
-                        state = tasksListState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .nestedScroll(nestedScrollConnection),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(tasksForSelectedDate.size, key = { tasksForSelectedDate[it].id }) { index ->
-                            val task = tasksForSelectedDate[index]
-                            TaskItem(
-                                task = task,
-                                checked = task.isChecked,
-                                onCheckedChange = { viewModel.toggleTask(task) },
-                                onEditTask = onAddTask,
-                                onDelete = { viewModel.deleteTask(task) }
+                        if (task != tasksForSelectedDate.last()) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                thickness = 1.dp,
+                                color = colorScheme.outline.copy(alpha = 0.3f)
                             )
-                            if (index < tasksForSelectedDate.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    thickness = 1.dp,
-                                    color = colorScheme.outline.copy(alpha = 0.5f)
-                                )
-                            }
                         }
                     }
                 }
@@ -772,7 +787,6 @@ fun DateStripRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    // Anchor everything to today's date so index mapping is stable
     val anchorDate = remember {
         Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
@@ -784,10 +798,8 @@ fun DateStripRow(
 
     val lazyListState = rememberLazyListState()
 
-    // Smoothly snap to and center the selected date when it changes programmatically
     LaunchedEffect(selectedDate) {
         val targetIndex = getIndexFromDate(anchorDate, selectedDate)
-        // Coerce targetIndex so it remains in a safe list bound and center it
         val scrollPosition = (targetIndex - 2).coerceAtLeast(0)
         lazyListState.scrollToItem(scrollPosition)
     }
@@ -807,7 +819,6 @@ fun DateStripRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        // High count (100,000 items) enables virtually infinite bidirectional scrolling
         items(100000) { index ->
             val date = getDateFromIndex(anchorDate, index)
             DateChipItem(

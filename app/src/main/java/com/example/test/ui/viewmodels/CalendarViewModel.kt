@@ -114,12 +114,6 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
         _isScheduleExpanded.value = !_isScheduleExpanded.value
     }
 
-    // Date Selection
-    fun selectDate(date: Date) {
-        _selectedDate.value = date
-        updateTasksForSelectedDate()
-        generateWeekDates()
-    }
 
     fun selectDateAndNavigateToDay(date: Date) {
         _selectedDate.value = date
@@ -127,7 +121,22 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
         updateTasksForSelectedDate()
         generateWeekDates()
     }
+    // Date Selection
+    fun selectDate(date: Date) {
+        _selectedDate.value = date
 
+        // Sync currentMonth if the selected date is in a different month
+        val selectedCal = Calendar.getInstance().apply { time = date }
+        val currentCal = _currentMonth.value
+        if (selectedCal.get(Calendar.MONTH) != currentCal.get(Calendar.MONTH) ||
+            selectedCal.get(Calendar.YEAR) != currentCal.get(Calendar.YEAR)) {
+            _currentMonth.value = selectedCal
+            generateCalendarDays()
+        }
+
+        updateTasksForSelectedDate()
+        generateWeekDates()
+    }
     // Month/Year Navigation
     fun nextMonth() {
         val newMonth = _currentMonth.value.clone() as Calendar
@@ -183,7 +192,7 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
     private fun generateCalendarDays() {
         val month = _currentMonth.value.clone() as Calendar
         month.set(Calendar.DAY_OF_MONTH, 1)
-        
+
         val firstDayOfWeek = month.get(Calendar.DAY_OF_WEEK)
         
         val startCalendar = month.clone() as Calendar
@@ -208,7 +217,7 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
             val tasksForDate = _allTasks.value.filter { task ->
                 task.date == dateStr
             }
-            
+
             days.add(
                 CalendarDay(
                     date = dayDate,
@@ -218,11 +227,15 @@ class CalendarViewModel(private val taskRepository: TaskRepository) : ViewModel(
                     tasks = tasksForDate
                 )
             )
-            
             startCalendar.add(Calendar.DAY_OF_MONTH, 1)
         }
-        
-        _calendarDays.value = days
+        val trimmed = if (days.takeLast(7).all { !it.isCurrentMonth }) {
+            days.dropLast(7)
+        } else {
+            days
+        }
+
+        _calendarDays.value = trimmed
     }
 
     private fun updateTasksForSelectedDate() {
