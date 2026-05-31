@@ -169,4 +169,36 @@ object TaskScheduler {
         // Use a fixed request code distinct from task IDs (e.g. Int.MAX_VALUE)
         return PendingIntent.getBroadcast(context, Int.MAX_VALUE, intent, flags)
     }
+    fun scheduleSnoozeNotification(
+        context: Context,
+        taskId: Long,
+        taskTitle: String,
+        triggerAtMillis: Long,
+        notifId: Int
+    ) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Log.e(TAG, "Cannot schedule exact alarm — permission not granted")
+                return
+            }
+        }
+
+        val intent = Intent(context, TaskNotificationReceiver::class.java).apply {
+            putExtra("task_id", taskId)
+            putExtra("task_title", taskTitle)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            // Use notifId as request code so it targets the right notification slot
+            notifId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        Log.d(TAG, "Snooze scheduled for task $taskId at $triggerAtMillis")
+    }
 }

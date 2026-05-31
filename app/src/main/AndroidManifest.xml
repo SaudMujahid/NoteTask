@@ -24,6 +24,14 @@
             android:name=".notification.DailyDigestReceiver"
             android:exported="false" />
 
+        <receiver android:name=".notification.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.test.ACTION_COMPLETE" />
+                <action android:name="com.example.test.ACTION_SNOOZE" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

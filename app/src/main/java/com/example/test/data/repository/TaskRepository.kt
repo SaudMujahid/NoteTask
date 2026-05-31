@@ -48,4 +48,8 @@ class TaskRepository(private val taskDao: TaskDao) {
     suspend fun addSubtask(taskId: Long, title: String) {
         taskDao.insertSubtask(Subtask(taskId = taskId, title = title))
     }
+
+    suspend fun markTaskComplete(taskId: Long) {
+        taskDao.updateTaskChecked(taskId, true)
+    }
 }
