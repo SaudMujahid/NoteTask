@@ -19,6 +19,7 @@ import com.example.test.data.repository.NoteRepository
 import com.example.test.data.repository.TaskRepository
 import com.example.test.notification.NotificationObserver
 import com.example.test.notification.TaskEventBus
+import com.example.test.notification.TaskScheduler
 
 class MainActivity : FragmentActivity() {
 
@@ -41,6 +42,9 @@ class MainActivity : FragmentActivity() {
         val database = AppDatabase.getDatabase(this)
         val taskRepository = TaskRepository(database.taskDao())
         val noteRepository = NoteRepository(database.noteDao())
+
+        // Ensure daily digest is scheduled
+        TaskScheduler.scheduleDailyDigest(this)
 
         setContent {
             MyApp(

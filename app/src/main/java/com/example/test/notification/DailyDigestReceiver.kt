@@ -2,12 +2,14 @@ package com.example.test.notification
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.example.test.MainActivity
 import com.example.test.R
 import com.example.test.data.AppDatabase
 import com.example.test.data.models.Task
@@ -16,7 +18,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 
 class DailyDigestReceiver : BroadcastReceiver() {
 
@@ -43,17 +47,7 @@ class DailyDigestReceiver : BroadcastReceiver() {
                     return@launch
                 }
 
-                // Build title here, pass lists down — no more String body
-                val notifTitle = when {
-                    overdueTasks.isNotEmpty() && upcomingTasks.isNotEmpty() ->
-                        "You have ${overdueTasks.size} overdue & ${upcomingTasks.size} tasks due today"
-                    overdueTasks.isNotEmpty() ->
-                        "You have ${overdueTasks.size} overdue task(s)"
-                    else ->
-                        "You have ${upcomingTasks.size} task(s) due today"
-                }
-
-                sendDigestNotification(context, notifTitle, overdueTasks, upcomingTasks)
+                sendDigestNotification(context, overdueTasks, upcomingTasks)
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error in DailyDigestReceiver: ${e.message}")
@@ -65,7 +59,6 @@ class DailyDigestReceiver : BroadcastReceiver() {
 
     private fun sendDigestNotification(
         context: Context,
-        title: String,
         overdueTasks: List<Task>,
         upcomingTasks: List<Task>
     ) {
@@ -82,56 +75,59 @@ class DailyDigestReceiver : BroadcastReceiver() {
             )
         }
 
-        val allTasks = overdueTasks + upcomingTasks
-        val today = getTodayDateString()
-
-        // One notification per task with Complete + Snooze actions
-        allTasks.forEachIndexed { index, task ->
-            val notifId = DIGEST_BASE_NOTIF_ID + index
-            val label = if (task.date < today) "⚠️ Overdue" else "📅 Due Today"
-            val body = "$label: ${task.title}"
-
-            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle(task.title)
-                .setContentText(body)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-                .setGroup(DIGEST_GROUP_KEY)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .addAction(
-                    TaskNotificationReceiver.buildCompleteAction(
-                        context, task.id, notifId, task.title
-                    )
-                )
-                .addAction(
-                    TaskNotificationReceiver.buildSnoozeAction(
-                        context, task.id, notifId, task.title
-                    )
-                )
-                .build()
-
-            notificationManager.notify(notifId, notification)
+        val todayDisplay = getTodayDisplayDate()
+        val summaryText = when {
+            overdueTasks.isNotEmpty() && upcomingTasks.isNotEmpty() ->
+                "${upcomingTasks.size} due today, ${overdueTasks.size} overdue"
+            overdueTasks.isNotEmpty() ->
+                "${overdueTasks.size} overdue"
+            else ->
+                "${upcomingTasks.size} due today"
         }
 
-        // Grouped summary notification in the shade
-        val summaryNotification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val inboxStyle = NotificationCompat.InboxStyle()
+            .setBigContentTitle(todayDisplay)
+            .setSummaryText(summaryText)
+
+        // Add upcoming tasks first (limit to a few lines)
+        upcomingTasks.take(5).forEach { task ->
+            inboxStyle.addLine("Today ${task.title}")
+        }
+        
+        // Add overdue tasks, maintaining a reasonable total line count
+        val remainingLines = 6 - upcomingTasks.size.coerceAtMost(5)
+        if (remainingLines > 0) {
+            overdueTasks.take(remainingLines).forEach { task ->
+                inboxStyle.addLine("${formatTaskDate(task.date)} ${task.title}")
+            }
+        }
+
+        if (upcomingTasks.size + overdueTasks.size > 6) {
+            inboxStyle.addLine("... and more")
+        }
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent, PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(title)
-            .setStyle(
-                NotificationCompat.InboxStyle()
-                    .setSummaryText(title)
-                    .also { style -> allTasks.forEach { style.addLine(it.title) } }
-            )
-            .setGroup(DIGEST_GROUP_KEY)
-            .setGroupSummary(true)
+            .setContentTitle(todayDisplay)
+            .setContentText(summaryText) // Fallback summary
+            .setSubText(summaryText) // Appears next to app name on many devices
+            .setStyle(inboxStyle)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .addAction(0, "View", pendingIntent)
+            .addAction(0, "Plan Now", pendingIntent)
             .build()
 
-        notificationManager.notify(DIGEST_NOTIFICATION_ID, summaryNotification)
-        Log.d(TAG, "Digest sent: ${overdueTasks.size} overdue, ${upcomingTasks.size} upcoming")
+        notificationManager.notify(DIGEST_NOTIFICATION_ID, notification)
+        Log.d(TAG, "Digest sent: $summaryText")
     }
 
     private fun getTodayDateString(): String {
@@ -143,11 +139,25 @@ class DailyDigestReceiver : BroadcastReceiver() {
         )
     }
 
+    private fun getTodayDisplayDate(): String {
+        val sdf = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
+        return sdf.format(Calendar.getInstance().time)
+    }
+
+    private fun formatTaskDate(dateStr: String): String {
+        return try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+            val date = inputFormat.parse(dateStr)
+            outputFormat.format(date!!)
+        } catch (_: Exception) {
+            dateStr
+        }
+    }
+
     companion object {
         private const val TAG = "DailyDigestReceiver"
         private const val CHANNEL_ID = "task_reminder_channel"
         private const val DIGEST_NOTIFICATION_ID = Int.MAX_VALUE
-        private const val DIGEST_BASE_NOTIF_ID = Int.MAX_VALUE - 500
-        private const val DIGEST_GROUP_KEY = "com.example.test.TASK_DIGEST"
     }
 }
