@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.test.data.models.Task
@@ -52,11 +53,9 @@ fun TaskItem(
     val whiteInDark = if (isDark) Color.White else cs.onSurface
     val primaryInDark = if (isDark) Color.White else cs.primary
 
-    // Internal sheet state
     var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Derive a single time label shown both in the row and the sheet
     val timeLabel: String? = when {
         task.isScheduled && task.scheduleStartMinutes != null && task.scheduleEndMinutes != null ->
             "${minutesToLabel(task.scheduleStartMinutes)} – ${minutesToLabel(task.scheduleEndMinutes)}"
@@ -65,7 +64,7 @@ fun TaskItem(
         else -> null
     }
 
-    // ── Bottom sheet ────────────────────────────────────────────────────────
+    // ── Bottom sheet ─────────────────────────────────────────────────────────
     if (showSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
@@ -80,7 +79,6 @@ fun TaskItem(
                     .padding(horizontal = 32.dp)
                     .padding(bottom = 40.dp)
             ) {
-                // Title row — clickable → edit
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -98,7 +96,6 @@ fun TaskItem(
                     CategoryChip(task.category)
                 }
 
-                // Time info
                 if (timeLabel != null) {
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -121,7 +118,6 @@ fun TaskItem(
                 HorizontalDivider(color = cs.outlineVariant)
                 Spacer(Modifier.height(20.dp))
 
-                // Description — clickable → edit
                 val hasDescription = task.description.isNotBlank()
                 Text(
                     text = if (hasDescription) task.description else "No description",
@@ -134,7 +130,6 @@ fun TaskItem(
                         .padding(vertical = 6.dp)
                 )
 
-                // Delete action
                 if (onDelete != null) {
                     Spacer(Modifier.height(24.dp))
                     OutlinedButton(
@@ -184,8 +179,11 @@ fun TaskItem(
             ) {
                 Text(
                     text = task.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (checked) whiteInDark.copy(alpha = 0.4f) else whiteInDark,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        textDecoration = if (checked) TextDecoration.LineThrough
+                        else TextDecoration.None
+                    ),
+                    color = if (checked) whiteInDark.copy(alpha = 0.35f) else whiteInDark,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -197,14 +195,14 @@ fun TaskItem(
                             Icon(
                                 imageVector = Icons.Default.Schedule,
                                 contentDescription = null,
-                                tint = primaryInDark,
+                                tint = if (checked) primaryInDark.copy(alpha = 0.35f) else primaryInDark,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = timeLabel,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = primaryInDark
+                                color = if (checked) primaryInDark.copy(alpha = 0.35f) else primaryInDark
                             )
                         }
                         Spacer(Modifier.height(4.dp))
