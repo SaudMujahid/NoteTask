@@ -231,7 +231,7 @@ fun NoteAuthDialog(
 }
 
 @Composable
-private fun PinChallenge(onSubmit: (String) -> Unit) {
+fun PinChallenge(onSubmit: (String) -> Unit) {
     var pin by rememberSaveable { mutableStateOf("") }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -295,7 +295,7 @@ private fun PinChallenge(onSubmit: (String) -> Unit) {
 }
 
 @Composable
-private fun PasswordChallenge(onSubmit: (String) -> Unit) {
+fun PasswordChallenge(onSubmit: (String) -> Unit) {
     var password by rememberSaveable { mutableStateOf("") }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -324,7 +324,7 @@ private fun PasswordChallenge(onSubmit: (String) -> Unit) {
 }
 
 @Composable
-private fun BiometricChallenge(
+fun BiometricChallenge(
     onUnlock: () -> Unit,
     onBackupPinSubmit: (String) -> Boolean
 ) {

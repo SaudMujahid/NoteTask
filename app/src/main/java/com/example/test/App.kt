@@ -182,6 +182,7 @@ fun MyApp(
                             noteType = noteType,
                             noteViewModel = noteViewModel,
                             profileRepository = profileRepository,
+                            onNavigateToAuth = { navController.navigate("profile") },
                             onBack = { navController.popBackStack() }
                         )
                     }

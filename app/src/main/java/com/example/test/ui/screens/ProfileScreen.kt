@@ -1,5 +1,6 @@
 package com.example.test.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,6 +52,7 @@ fun ProfileScreen(
     var showPasswordDialog by rememberSaveable { mutableStateOf(false) }
     var showFingerprintDisclaimer by rememberSaveable { mutableStateOf(false) }
     var showFingerprintPinDialog by rememberSaveable { mutableStateOf(false) }
+    var showSecurityConfirmation by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(setupState) {
         when (setupState) {
@@ -194,7 +196,7 @@ fun ProfileScreen(
                     if (profile.authType != AuthType.NONE) {
                         Spacer(Modifier.height(16.dp))
                         TextButton(
-                            onClick = { viewModel.clearSecurity() },
+                            onClick = { showSecurityConfirmation = true },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
                             Text("Remove Security", color = colorScheme.error)
@@ -205,6 +207,61 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(20.dp))
         }
+    }
+
+    if (showSecurityConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showSecurityConfirmation = false },
+            title = { Text("Confirm Removal") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text("Please verify your identity to remove security.", 
+                        fontSize = 14.sp, 
+                        color = colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    
+                    when (profile.authType) {
+                        AuthType.PIN -> PinChallenge(
+                            onSubmit = { pin ->
+                                if (viewModel.verifyPin(pin)) {
+                                    viewModel.clearSecurity()
+                                    showSecurityConfirmation = false
+                                }
+                            }
+                        )
+                        AuthType.PASSWORD -> PasswordChallenge(
+                            onSubmit = { password ->
+                                if (viewModel.verifyPassword(password)) {
+                                    viewModel.clearSecurity()
+                                    showSecurityConfirmation = false
+                                }
+                            }
+                        )
+                        AuthType.BIOMETRIC -> BiometricChallenge(
+                            onUnlock = {
+                                viewModel.clearSecurity()
+                                showSecurityConfirmation = false
+                            },
+                            onBackupPinSubmit = { pin ->
+                                if (viewModel.verifyBackupPin(pin)) {
+                                    viewModel.clearSecurity()
+                                    showSecurityConfirmation = false
+                                    true
+                                } else false
+                            }
+                        )
+                        else -> {}
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showSecurityConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Name change warning dialog
@@ -346,7 +403,6 @@ private fun PinSetupDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var step by rememberSaveable { mutableStateOf(1) }
     var pin1 by rememberSaveable { mutableStateOf("") }
     var pin2 by rememberSaveable { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
@@ -358,25 +414,106 @@ private fun PinSetupDialog(
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(subtitle, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 Spacer(Modifier.height(20.dp))
+
+                // First PIN Row
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val currentPin = if (step == 1) pin1 else pin2
                     repeat(4) { index ->
-                        Box(modifier = Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (index < currentPin.length) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)))
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(
+                                    if (index < pin1.length) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                )
+                        )
                     }
                 }
-                error?.let { Spacer(Modifier.height(8.dp)); Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
-                Spacer(Modifier.height(20.dp))
-                val buttons = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("", "0", "⌫"))
+
+                // Second PIN Row (Confirm) - "alot like the name thing"
+                AnimatedVisibility(
+                    visible = pin1.length == 4,
+                    enter = expandVertically() + fadeIn()
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(Modifier.height(16.dp))
+                        Text("Confirm your PIN", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            repeat(4) { index ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(
+                                            if (index < pin2.length) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                error?.let {
+                    Spacer(Modifier.height(12.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                }
+
+                Spacer(Modifier.height(24.dp))
+                val buttons = listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9"),
+                    listOf("", "0", "⌫")
+                )
                 buttons.forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         row.forEach { key ->
-                            if (key.isEmpty()) Spacer(Modifier.size(64.dp))
-                            else Box(modifier = Modifier.size(64.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.surfaceVariant).clickable {
-                                when (key) {
-                                    "⌫" -> { if (step == 1 && pin1.isNotEmpty()) pin1 = pin1.dropLast(1) else if (step == 2 && pin2.isNotEmpty()) pin2 = pin2.dropLast(1); error = null }
-                                    else -> { if (step == 1 && pin1.length < 4) { pin1 += key; if (pin1.length == 4) step = 2 } else if (step == 2 && pin2.length < 4) { pin2 += key; if (pin2.length == 4) { if (pin1 == pin2) onConfirm(pin1) else { error = "PINs do not match"; pin2 = "" } } } }
+                            if (key.isEmpty()) {
+                                Spacer(Modifier.size(64.dp))
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable {
+                                            when (key) {
+                                                "⌫" -> {
+                                                    if (pin2.isNotEmpty()) {
+                                                        pin2 = pin2.dropLast(1)
+                                                    } else if (pin1.isNotEmpty()) {
+                                                        pin1 = pin1.dropLast(1)
+                                                    }
+                                                    error = null
+                                                }
+                                                else -> {
+                                                    if (pin1.length < 4) {
+                                                        pin1 += key
+                                                    } else if (pin2.length < 4) {
+                                                        pin2 += key
+                                                        if (pin2.length == 4) {
+                                                            if (pin1 == pin2) {
+                                                                onConfirm(pin1)
+                                                            } else {
+                                                                error = "PINs do not match"
+                                                                pin2 = ""
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = key,
+                                        fontSize = if (key == "⌫") 20.sp else 22.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
-                            }, contentAlignment = Alignment.Center) { Text(text = key, fontSize = if (key == "⌫") 20.sp else 22.sp, fontWeight = FontWeight.Medium) }
+                            }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -384,7 +521,9 @@ private fun PinSetupDialog(
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
     )
 }
 
@@ -411,16 +550,26 @@ private fun PasswordSetupDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = pass2,
-                    onValueChange = { pass2 = it; error = null },
-                    label = { Text("Confirm Password") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+
+                // Confirm Password Field - "alot like the name thing"
+                AnimatedVisibility(
+                    visible = pass1.isNotEmpty(),
+                    enter = expandVertically() + fadeIn()
+                ) {
+                    Column {
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = pass2,
+                            onValueChange = { pass2 = it; error = null },
+                            label = { Text("Confirm Password") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
+
                 error?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
