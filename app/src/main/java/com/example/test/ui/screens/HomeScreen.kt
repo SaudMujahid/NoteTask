@@ -37,6 +37,7 @@ import com.example.test.ui.components.TaskCategories
 import com.example.test.ui.components.TaskItem
 import com.example.test.ui.components.TransferSheet
 import com.example.test.ui.viewmodels.TaskViewModel
+import com.example.test.ui.components.QuickAddTaskSheet
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -152,6 +153,7 @@ fun HomeScreen(
     val completedTasks = remember(todayTasks) { todayTasks.filter { it.isChecked } }
     var homeTaskFilter by remember { mutableStateOf(HomeTaskFilter.PENDING) }
     var selectedCategory by remember { mutableStateOf(TaskCategories.ALL) }
+    var showQuickAdd by remember { mutableStateOf(false) }
     val statusFilteredTasks = when (homeTaskFilter) {
         HomeTaskFilter.PENDING -> pendingTasks
         HomeTaskFilter.COMPLETED -> completedTasks
@@ -287,7 +289,7 @@ fun HomeScreen(
                     )
             )
             LargeFloatingActionButton(
-                onClick = { onAddTask(null) },
+                onClick = { showQuickAdd = true  },
                 shape = CircleShape,
                 containerColor = if (isDark) colorScheme.primary else Color.White,
                 contentColor   = if (isDark) Color.White else colorScheme.primary,
@@ -299,6 +301,17 @@ fun HomeScreen(
             ) {
                 Icon(Icons.Default.Add, "Add Task", modifier = Modifier.size(32.dp))
             }
+            if (showQuickAdd) {
+                QuickAddTaskSheet(
+                    taskViewModel = taskViewModel,
+                    onDismiss = { showQuickAdd = false },
+                    onOpenFullEditor = {
+                        showQuickAdd = false
+                        onAddTask(null)   // opens the existing full AddTaskScreen
+                    }
+                )
+            }
+
         }
 
         // ── Drawer ──────────────────────

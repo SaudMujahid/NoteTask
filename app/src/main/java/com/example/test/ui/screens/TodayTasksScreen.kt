@@ -95,7 +95,7 @@ fun TodayTasksScreen(
                 title = {
                     Column {
                         Text(
-                            "Tasks",
+                            "All Tasks",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Black,
                             color = cs.onBackground
